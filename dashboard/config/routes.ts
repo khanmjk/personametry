@@ -21,6 +21,13 @@ export default [
     icon: 'dashboard',
     component: './Personametry',
   },
+  // Sleep / Life Constraints
+  {
+    path: '/sleep',
+    name: 'Sleep',
+    icon: 'experiment',
+    component: './Sleep',
+  },
   // Trend Analysis
   {
     path: '/trends',
@@ -35,13 +42,6 @@ export default [
     icon: 'team',
     component: './Personas',
   },
-  // RAGE Scorecard
-  {
-    path: '/scorecard',
-    name: 'Scorecard',
-    icon: 'trophy',
-    component: './Scorecard',
-  },
   // Home redirect
   {
     path: '/',
@@ -54,3 +54,4 @@ export default [
     path: './*',
   },
 ];
+

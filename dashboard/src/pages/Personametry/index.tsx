@@ -1,19 +1,19 @@
 /**
  * Personametry Dashboard - Executive Overview
  * --------------------------------------------
- * CEO-level dashboard with clean, premium visualizations.
+ * CEO-level dashboard excluding Sleep (see dedicated Sleep page).
  */
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Statistic, Select, Spin, Alert, Typography, Progress, Divider } from 'antd';
+import { Row, Col, Statistic, Select, Spin, Alert, Typography, Progress, Divider, Tag, Space } from 'antd';
 import { Column, Pie } from '@ant-design/charts';
 import {
   ClockCircleOutlined,
   RiseOutlined,
   FallOutlined,
   CalendarOutlined,
-  PieChartOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
 import type { TimeEntry, DataMetadata } from '@/models/personametry';
 import { PERSONA_COLORS, PERSONA_SHORT_NAMES, YEAR_COLORS, STATUS_COLORS } from '@/models/personametry';
@@ -33,18 +33,19 @@ import {
 
 const { Title, Text } = Typography;
 
-// Style constants for executive look
 const CARD_STYLE = {
   borderRadius: 8,
   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
 };
+
+const SLEEP_PERSONA = 'P0 Life Constraints (Sleep)';
 
 const PersonametryDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [metadata, setMetadata] = useState<DataMetadata | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number>(2022);
+  const [selectedYear, setSelectedYear] = useState<number | 'ALL'>(2022);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [dataSource, setDataSourceState] = useState<DataSource>(getDataSource());
 
@@ -74,17 +75,30 @@ const PersonametryDashboard: React.FC = () => {
     fetchData(source);
   };
 
-  // Calculate metrics
-  const yearEntries = filterByYear(entries, selectedYear);
-  const personaSummaries = groupByPersona(yearEntries);
-  const monthlyTrends = groupByMonth(yearEntries);
-  const totalHours = sumHours(yearEntries);
-  const yoyComparison = calculateYoYComparison(entries, selectedYear, selectedYear - 1);
+  // Filter entries - if ALL YEARS, use all entries; otherwise filter by year
+  const filteredEntries = selectedYear === 'ALL' 
+    ? entries 
+    : filterByYear(entries, selectedYear);
+  
+  // EXCLUDE SLEEP from main dashboard metrics
+  const entriesExcludingSleep = filteredEntries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
+  
+  // Calculate metrics (excluding sleep)
+  const personaSummaries = groupByPersona(entriesExcludingSleep);
+  const monthlyTrends = groupByMonth(entriesExcludingSleep);
+  const totalHours = sumHours(entriesExcludingSleep);
 
-  // Pie chart data with proper labeling
+  // YoY comparison (excluding sleep)
+  const currentYear = selectedYear === 'ALL' ? availableYears[0] : selectedYear;
+  const yoyComparison = calculateYoYComparison(entries, currentYear, currentYear - 1)
+    .filter(item => item.persona !== SLEEP_PERSONA);
+
+  // Pie chart data - with percentage and hours in labels
   const pieData = personaSummaries.map((p) => ({
     type: PERSONA_SHORT_NAMES[p.persona] || p.persona,
     value: Math.round(p.totalHours),
+    percentage: p.percentageOfTotal,
+    fullName: p.persona,
   }));
 
   // Monthly bar chart data
@@ -93,9 +107,10 @@ const PersonametryDashboard: React.FC = () => {
     hours: Math.round(m.hours),
   }));
 
-  // Top performer
-  const topPersona = personaSummaries[0];
-  const totalDays = Math.round(totalHours / 24);
+  // Top 3 personas (excluding sleep)
+  const top3 = personaSummaries.slice(0, 3);
+  const entryCount = entriesExcludingSleep.length;
+  const yearLabel = selectedYear === 'ALL' ? 'All Years' : selectedYear.toString();
 
   if (loading) {
     return (
@@ -116,6 +131,12 @@ const PersonametryDashboard: React.FC = () => {
     );
   }
 
+  // Year options including ALL YEARS
+  const yearOptions = [
+    { label: 'ALL YEARS', value: 'ALL' as const },
+    ...availableYears.map((y) => ({ label: y.toString(), value: y })),
+  ];
+
   return (
     <PageContainer
       header={{
@@ -129,7 +150,7 @@ const PersonametryDashboard: React.FC = () => {
             key="datasource"
             value={dataSource}
             onChange={handleDataSourceChange}
-            style={{ width: 140 }}
+            style={{ width: 120 }}
             options={[
               { label: 'Harvest ETL', value: 'harvest' },
               { label: 'QuickSight', value: 'quicksight' },
@@ -139,8 +160,8 @@ const PersonametryDashboard: React.FC = () => {
             key="year"
             value={selectedYear}
             onChange={setSelectedYear}
-            style={{ width: 90 }}
-            options={availableYears.map((y) => ({ label: y.toString(), value: y }))}
+            style={{ width: 120 }}
+            options={yearOptions}
           />,
         ],
       }}
@@ -157,59 +178,67 @@ const PersonametryDashboard: React.FC = () => {
               prefix={<ClockCircleOutlined />}
             />
             <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">{totalDays} days tracked</Text>
+            <Text type="secondary">Excludes sleep</Text>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <ProCard style={CARD_STYLE}>
-            <Statistic
-              title={<Text strong>Top Persona</Text>}
-              value={PERSONA_SHORT_NAMES[topPersona?.persona] || 'N/A'}
-              valueStyle={{ color: PERSONA_COLORS[topPersona?.persona] || '#333', fontSize: 28, fontWeight: 600 }}
-              prefix={<PieChartOutlined />}
-            />
-            <Divider style={{ margin: '12px 0' }} />
-            <Progress
-              percent={topPersona?.percentageOfTotal || 0}
-              strokeColor={PERSONA_COLORS[topPersona?.persona]}
-              size="small"
-            />
+            <div style={{ marginBottom: 8 }}>
+              <Text strong style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)' }}>Top 3 Personas</Text>
+              <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>(excl. sleep)</Text>
+            </div>
+            <Space direction="vertical" size={4} style={{ width: '100%' }}>
+              {top3.map((p, i) => (
+                <div key={p.persona} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Space size={4}>
+                    <TrophyOutlined style={{ color: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32' }} />
+                    <Tag color={PERSONA_COLORS[p.persona]} style={{ margin: 0 }}>
+                      {PERSONA_SHORT_NAMES[p.persona]}
+                    </Tag>
+                  </Space>
+                  <Text strong style={{ fontSize: 12 }}>{p.percentageOfTotal}%</Text>
+                </div>
+              ))}
+            </Space>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <ProCard style={CARD_STYLE}>
             <Statistic
               title={<Text strong>Time Entries</Text>}
-              value={yearEntries.length.toLocaleString()}
+              value={entryCount.toLocaleString()}
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
               prefix={<CalendarOutlined />}
             />
             <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">
-              {metadata?.source === 'harvest_time_report_from2015-07-06to2022-07-31.xlsx' ? 'Harvest' : 'QuickSight'} data
-            </Text>
+            <Text type="secondary">{metadata?.source?.includes('harvest') ? 'Harvest' : 'QuickSight'} data</Text>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <ProCard style={CARD_STYLE}>
             <Statistic
               title={<Text strong>Avg. Hours/Day</Text>}
-              value={(totalHours / 365).toFixed(1)}
+              value={(totalHours / (selectedYear === 'ALL' ? availableYears.length * 365 : 365)).toFixed(1)}
               suffix="hrs"
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
             />
             <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">Based on full year</Text>
+            <Text type="secondary">{yearLabel}</Text>
           </ProCard>
         </Col>
       </Row>
 
       {/* Charts Row */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
-        {/* Persona Pie Chart */}
+        {/* Persona Pie Chart - EXCLUDING SLEEP with % and hours */}
         <Col xs={24} lg={10}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Time Distribution by Persona</Title>}
+            title={
+              <span>
+                <Title level={5} style={{ margin: 0, display: 'inline' }}>Time Distribution</Title>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>(excludes sleep)</Text>
+              </span>
+            }
             style={{ ...CARD_STYLE, height: 420 }}
           >
             <Pie
@@ -225,23 +254,21 @@ const PersonametryDashboard: React.FC = () => {
               }}
               label={{
                 type: 'outer',
-                content: ({ type, percent }) => `${type}: ${(percent * 100).toFixed(0)}%`,
-                style: { fontSize: 12, fontWeight: 500 },
+                content: ({ type, value, percentage }) => `${type}\n${(percentage * 100).toFixed(0)}% | ${formatHours(value)}h`,
+                style: { fontSize: 11, fontWeight: 500, lineHeight: 1.2 },
               }}
               legend={{
                 position: 'right',
-                itemName: {
-                  style: { fontSize: 12, fontWeight: 500 },
-                },
+                itemName: { style: { fontSize: 12, fontWeight: 500 } },
               }}
               statistic={{
                 title: {
-                  content: selectedYear.toString(),
-                  style: { fontSize: 16, fontWeight: 500 },
+                  content: yearLabel,
+                  style: { fontSize: 14, fontWeight: 500 },
                 },
                 content: {
                   content: `${formatHours(totalHours)} hrs`,
-                  style: { fontSize: 20, fontWeight: 600 },
+                  style: { fontSize: 18, fontWeight: 600 },
                 },
               }}
               interactions={[{ type: 'element-active' }]}
@@ -249,10 +276,10 @@ const PersonametryDashboard: React.FC = () => {
           </ProCard>
         </Col>
 
-        {/* Monthly Hours Bar Chart */}
+        {/* Monthly Hours Bar Chart - IMPROVED FONT */}
         <Col xs={24} lg={14}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Monthly Hours ({selectedYear})</Title>}
+            title={<Title level={5} style={{ margin: 0 }}>Monthly Hours ({yearLabel})</Title>}
             style={{ ...CARD_STYLE, height: 420 }}
           >
             <Column
@@ -260,15 +287,20 @@ const PersonametryDashboard: React.FC = () => {
               xField="month"
               yField="hours"
               height={320}
-              color={YEAR_COLORS[selectedYear] || '#0D7377'}
+              color={selectedYear === 'ALL' ? '#0D7377' : (YEAR_COLORS[selectedYear as number] || '#0D7377')}
               columnWidthRatio={0.6}
               label={{
                 position: 'top',
                 content: ({ hours }) => `${hours}`,
-                style: { fill: '#666', fontSize: 11, fontWeight: 500 },
+                style: { 
+                  fill: '#333', 
+                  fontSize: 13, 
+                  fontWeight: 700,
+                  textShadow: '0 0 3px #fff, 0 0 3px #fff',
+                },
               }}
               xAxis={{
-                label: { style: { fontSize: 11 } },
+                label: { style: { fontSize: 12, fontWeight: 500 } },
               }}
               yAxis={{
                 title: { text: 'Hours', style: { fontSize: 12 } },
@@ -282,11 +314,18 @@ const PersonametryDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* YoY Comparison Grid */}
+      {/* YoY Comparison Grid - EXCLUDING SLEEP */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
         <Col xs={24}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Year-over-Year Comparison ({selectedYear} vs {selectedYear - 1})</Title>}
+            title={
+              <span>
+                <Title level={5} style={{ margin: 0, display: 'inline' }}>
+                  Year-over-Year Comparison ({currentYear} vs {currentYear - 1})
+                </Title>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>(excludes sleep)</Text>
+              </span>
+            }
             style={CARD_STYLE}
           >
             <Row gutter={[16, 16]}>
