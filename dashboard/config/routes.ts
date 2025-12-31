@@ -42,6 +42,13 @@ export default [
     icon: 'team',
     component: './Personas',
   },
+  // All Time / Historical Overview
+  {
+    path: '/alltime',
+    name: 'All Time',
+    icon: 'history',
+    component: './AllTime',
+  },
   // Home redirect
   {
     path: '/',

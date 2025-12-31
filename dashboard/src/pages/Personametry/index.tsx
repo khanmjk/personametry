@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Statistic, Select, Spin, Alert, Typography, Progress, Divider, Tag, Space } from 'antd';
+import { Row, Col, Statistic, Select, Spin, Alert, Typography, Divider, Tag, Space } from 'antd';
 import { Column, Pie } from '@ant-design/charts';
 import {
   ClockCircleOutlined,
@@ -45,7 +45,7 @@ const PersonametryDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [metadata, setMetadata] = useState<DataMetadata | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | 'ALL'>(2022);
+  const [selectedYear, setSelectedYear] = useState<number>(2022);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [dataSource, setDataSourceState] = useState<DataSource>(getDataSource());
 
@@ -75,13 +75,11 @@ const PersonametryDashboard: React.FC = () => {
     fetchData(source);
   };
 
-  // Filter entries - if ALL YEARS, use all entries; otherwise filter by year
-  const filteredEntries = selectedYear === 'ALL' 
-    ? entries 
-    : filterByYear(entries, selectedYear);
+  // Filter entries by selected year
+  const yearEntries = filterByYear(entries, selectedYear);
   
   // EXCLUDE SLEEP from main dashboard metrics
-  const entriesExcludingSleep = filteredEntries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
+  const entriesExcludingSleep = yearEntries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
   
   // Calculate metrics (excluding sleep)
   const personaSummaries = groupByPersona(entriesExcludingSleep);
@@ -89,11 +87,10 @@ const PersonametryDashboard: React.FC = () => {
   const totalHours = sumHours(entriesExcludingSleep);
 
   // YoY comparison (excluding sleep)
-  const currentYear = selectedYear === 'ALL' ? availableYears[0] : selectedYear;
-  const yoyComparison = calculateYoYComparison(entries, currentYear, currentYear - 1)
+  const yoyComparison = calculateYoYComparison(entries, selectedYear, selectedYear - 1)
     .filter(item => item.persona !== SLEEP_PERSONA);
 
-  // Pie chart data - with percentage and hours in labels
+  // Pie chart data - with percentage and hours
   const pieData = personaSummaries.map((p) => ({
     type: PERSONA_SHORT_NAMES[p.persona] || p.persona,
     value: Math.round(p.totalHours),
@@ -110,7 +107,6 @@ const PersonametryDashboard: React.FC = () => {
   // Top 3 personas (excluding sleep)
   const top3 = personaSummaries.slice(0, 3);
   const entryCount = entriesExcludingSleep.length;
-  const yearLabel = selectedYear === 'ALL' ? 'All Years' : selectedYear.toString();
 
   if (loading) {
     return (
@@ -131,11 +127,8 @@ const PersonametryDashboard: React.FC = () => {
     );
   }
 
-  // Year options including ALL YEARS
-  const yearOptions = [
-    { label: 'ALL YEARS', value: 'ALL' as const },
-    ...availableYears.map((y) => ({ label: y.toString(), value: y })),
-  ];
+  // Year options - NO "ALL YEARS" (that's now a separate page)
+  const yearOptions = availableYears.map((y) => ({ label: y.toString(), value: y }));
 
   return (
     <PageContainer
@@ -160,7 +153,7 @@ const PersonametryDashboard: React.FC = () => {
             key="year"
             value={selectedYear}
             onChange={setSelectedYear}
-            style={{ width: 120 }}
+            style={{ width: 100 }}
             options={yearOptions}
           />,
         ],
@@ -218,19 +211,19 @@ const PersonametryDashboard: React.FC = () => {
           <ProCard style={CARD_STYLE}>
             <Statistic
               title={<Text strong>Avg. Hours/Day</Text>}
-              value={(totalHours / (selectedYear === 'ALL' ? availableYears.length * 365 : 365)).toFixed(1)}
+              value={(totalHours / 365).toFixed(1)}
               suffix="hrs"
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
             />
             <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">{yearLabel}</Text>
+            <Text type="secondary">{selectedYear}</Text>
           </ProCard>
         </Col>
       </Row>
 
       {/* Charts Row */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
-        {/* Persona Pie Chart - EXCLUDING SLEEP with % and hours */}
+        {/* Persona Pie Chart - SPIDER LABELS with % and hours visible */}
         <Col xs={24} lg={10}>
           <ProCard
             title={
@@ -241,45 +234,64 @@ const PersonametryDashboard: React.FC = () => {
             }
             style={{ ...CARD_STYLE, height: 420 }}
           >
-            <Pie
-              data={pieData}
-              angleField="value"
-              colorField="type"
-              radius={0.85}
-              innerRadius={0.55}
-              height={320}
-              color={({ type }) => {
-                const persona = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === type)?.[0];
-                return persona ? PERSONA_COLORS[persona] : '#888';
-              }}
-              label={{
-                type: 'outer',
-                content: ({ type, value, percentage }) => `${type}\n${(percentage * 100).toFixed(0)}% | ${formatHours(value)}h`,
-                style: { fontSize: 11, fontWeight: 500, lineHeight: 1.2 },
-              }}
-              legend={{
-                position: 'right',
-                itemName: { style: { fontSize: 12, fontWeight: 500 } },
-              }}
-              statistic={{
-                title: {
-                  content: yearLabel,
-                  style: { fontSize: 14, fontWeight: 500 },
-                },
-                content: {
-                  content: `${formatHours(totalHours)} hrs`,
-                  style: { fontSize: 18, fontWeight: 600 },
-                },
-              }}
-              interactions={[{ type: 'element-active' }]}
-            />
+            <Row gutter={16}>
+              {/* Pie Chart */}
+              <Col span={12}>
+                <Pie
+                  data={pieData}
+                  angleField="value"
+                  colorField="type"
+                  radius={0.9}
+                  innerRadius={0}
+                  height={300}
+                  color={({ type }: { type: string }) => {
+                    const persona = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === type)?.[0];
+                    return persona ? PERSONA_COLORS[persona] : '#888';
+                  }}
+                  label={false}
+                  legend={false}
+                  statistic={false}
+                  interactions={[{ type: 'element-active' }]}
+                />
+              </Col>
+              {/* Custom Legend Table */}
+              <Col span={12}>
+                <div style={{ paddingTop: 20 }}>
+                  {pieData.map((item) => {
+                    const persona = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === item.type)?.[0];
+                    const color = persona ? PERSONA_COLORS[persona] : '#888';
+                    return (
+                      <div 
+                        key={item.type} 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          padding: '6px 0',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <Space size={8}>
+                          <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: color }} />
+                          <Text style={{ fontSize: 13 }}>{item.type}</Text>
+                        </Space>
+                        <Space size={12}>
+                          <Text strong style={{ fontSize: 13, minWidth: 40, textAlign: 'right' }}>{item.percentage}%</Text>
+                          <Text type="secondary" style={{ fontSize: 12, minWidth: 50, textAlign: 'right' }}>{formatHours(item.value)}h</Text>
+                        </Space>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Col>
+            </Row>
           </ProCard>
         </Col>
 
         {/* Monthly Hours Bar Chart - IMPROVED FONT */}
         <Col xs={24} lg={14}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Monthly Hours ({yearLabel})</Title>}
+            title={<Title level={5} style={{ margin: 0 }}>Monthly Hours ({selectedYear})</Title>}
             style={{ ...CARD_STYLE, height: 420 }}
           >
             <Column
@@ -287,11 +299,11 @@ const PersonametryDashboard: React.FC = () => {
               xField="month"
               yField="hours"
               height={320}
-              color={selectedYear === 'ALL' ? '#0D7377' : (YEAR_COLORS[selectedYear as number] || '#0D7377')}
+              color={YEAR_COLORS[selectedYear] || '#0D7377'}
               columnWidthRatio={0.6}
               label={{
                 position: 'top',
-                content: ({ hours }) => `${hours}`,
+                content: ({ hours }: { hours: number }) => `${hours}`,
                 style: { 
                   fill: '#333', 
                   fontSize: 13, 
@@ -307,7 +319,7 @@ const PersonametryDashboard: React.FC = () => {
                 grid: { line: { style: { stroke: '#f0f0f0' } } },
               }}
               tooltip={{
-                formatter: (datum) => ({ name: 'Hours', value: `${datum.hours} hrs` }),
+                formatter: (datum: { hours: number }) => ({ name: 'Hours', value: `${datum.hours} hrs` }),
               }}
             />
           </ProCard>
@@ -321,7 +333,7 @@ const PersonametryDashboard: React.FC = () => {
             title={
               <span>
                 <Title level={5} style={{ margin: 0, display: 'inline' }}>
-                  Year-over-Year Comparison ({currentYear} vs {currentYear - 1})
+                  Year-over-Year Comparison ({selectedYear} vs {selectedYear - 1})
                 </Title>
                 <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>(excludes sleep)</Text>
               </span>
