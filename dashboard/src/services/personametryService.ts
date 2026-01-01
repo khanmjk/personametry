@@ -28,8 +28,8 @@ dayjs.extend(isoWeek);
 export type DataSource = 'quicksight' | 'harvest';
 
 const DATA_SOURCE_PATHS: Record<DataSource, string> = {
-  quicksight: '/data/timeentries.json',
-  harvest: '/data/timeentries_harvest.json',
+  quicksight: 'data/timeentries.json',
+  harvest: 'data/timeentries_harvest.json',
 };
 
 let cachedData: Record<DataSource, TimeEntriesData | null> = {
