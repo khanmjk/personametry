@@ -209,7 +209,7 @@ const SleepPage: React.FC = () => {
               columnWidthRatio={0.6}
               label={{
                 position: 'top',
-                content: ({ hours }) => `${hours}`,
+                content: ({ hours }: { hours: number }) => `${hours}`,
                 style: { fill: '#333', fontSize: 12, fontWeight: 600 },
               }}
               xAxis={{ label: { style: { fontSize: 11 } } }}
@@ -232,14 +232,17 @@ const SleepPage: React.FC = () => {
               height={290}
               color={PERSONA_COLORS[SLEEP_PERSONA]}
               point={{ size: 5, shape: 'circle' }}
-              label={{
-                formatter: ({ hours }) => `${(hours / 1000).toFixed(1)}k`,
-                style: { fill: '#333', fontSize: 11, fontWeight: 500 },
-              }}
+              label={false}
               xAxis={{ label: { style: { fontSize: 11 } } }}
               yAxis={{
                 title: { text: 'Total Hours', style: { fontSize: 12 } },
                 grid: { line: { style: { stroke: '#f0f0f0' } } },
+              }}
+              tooltip={{
+                formatter: (datum: { year: string; hours: number }) => ({
+                  name: datum.year,
+                  value: `${(datum.hours / 1000).toFixed(1)}k hrs`,
+                }),
               }}
             />
           </ProCard>
