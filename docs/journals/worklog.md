@@ -287,3 +287,11 @@
     - **Hash Routing**: Mandatory for `config.ts`.
     - **No `/public/` prefix**: Runtime paths must match build output structure.
 - **Status**: New branding live, documentation aligned with deployment reality.
+
+### 14:40 - UI Polish: Pie Charts & Tooltips
+
+- **Issue**: Pie charts colors defaulted to random because Ant Design Charts couldn't parse the color callback correctly. Tooltips showed raw decimals.
+- **Fix**:
+  - Updated `Personametry/index.tsx` and `Individual/index.tsx` to use correct callback signature for `color` prop.
+  - Added formatted tooltips: `Category: X hrs (Y%)`.
+- **Outcome**: Visual consistency restored. Charts now match their legends perfectly.
