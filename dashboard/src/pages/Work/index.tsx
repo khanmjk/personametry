@@ -1,5 +1,5 @@
 import { PageContainer } from '@ant-design/pro-components';
-import { Col, Row, Card, Statistic, Select, Space, Alert } from 'antd';
+import { Col, Row, Card, Statistic, Select } from 'antd';
 import React, { useEffect, useState } from 'react';
 import {
   calculateWorkPatterns,
@@ -72,16 +72,7 @@ const WorkPage: React.FC = () => {
             />
         ]}
     >
-       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col span={24}>
-           <Alert 
-             message="Professional Persona Analysis" 
-             description="Filtered strictly for 'P3 Professional' activities. Analyzing intensity, sustainability, and burnout patterns."
-             type="info" 
-             showIcon 
-           />
-        </Col>
-      </Row>
+
 
       {/* KPI Row (Year Specific) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -121,7 +112,7 @@ const WorkPage: React.FC = () => {
       {/* Main Heatmap Row (History) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
-          <WorkHeatmap data={fullAnalysis.workIntensityHeatmap} height={350} />
+          <WorkHeatmap data={fullAnalysis.workIntensityHeatmap} height={480} />
         </Col>
       </Row>
 
