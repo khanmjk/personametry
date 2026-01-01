@@ -31,20 +31,33 @@ const YoYComparisonBar: React.FC<YoYComparisonBarProps> = ({
     delta: Math.round(item.deltaHours),
     percentChange: item.percentageChange,
     type: item.deltaHours >= 0 ? 'Gain' : 'Loss',
+    colorVal: item.deltaHours >= 0 ? '#52c41a' : '#ff4d4f',
   }));
 
   // Sort by delta (largest positive to largest negative)
   chartData.sort((a, b) => b.delta - a.delta);
 
+  // Generate color array matching the sorted data order
+  const mappedColors = chartData.map((d) => (d.delta >= 0 ? '#52c41a' : '#ff4d4f'));
+
   const config = {
     data: chartData,
     xField: 'persona',
     yField: 'delta',
-    seriesField: 'type',
+    // Use persona to trigger categorical coloring from palette
+    colorField: 'persona',
     height: height - 50,
     autoFit: true,
-    // 'Gain' (G) comes before 'Loss' (L), so: [Green, Red]
-    color: ['#52c41a', '#ff4d4f'],
+    // THEME BOMB: Force the palette to be our specific sorted colors
+    theme: {
+      colors10: mappedColors,
+      colors20: mappedColors,
+      styleSheet: {
+        paletteQualitative10: mappedColors,
+        paletteQualitative20: mappedColors,
+      }
+    },
+    legend: false,
     label: {
       position: 'middle' as const, // Safer position
       content: (datum: { delta: number; percentChange: number }) => {

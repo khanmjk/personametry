@@ -98,7 +98,7 @@ const GainsLossesPage: React.FC = () => {
       sorter: (a: YearlyComparison, b: YearlyComparison) => a.deltaHours - b.deltaHours,
       render: (delta: number) => (
         <Text style={{ 
-          color: delta >= 0 ? '#1890ff' : '#ff4d4f', 
+          color: delta >= 0 ? '#52c41a' : '#ff4d4f', 
           fontWeight: 600 
         }}>
           {delta >= 0 ? '+' : ''}{formatHours(delta)}
@@ -111,7 +111,7 @@ const GainsLossesPage: React.FC = () => {
       key: 'pct',
       align: 'right' as const,
       render: (pct: number) => {
-         const color = pct >= 0 ? '#1890ff' : '#ff4d4f';
+         const color = pct >= 0 ? '#52c41a' : '#ff4d4f';
          const Icon = pct >= 0 ? ArrowUpOutlined : ArrowDownOutlined;
          return (
            <Space size={4}>
