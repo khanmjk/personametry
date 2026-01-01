@@ -81,13 +81,17 @@ const PersonametryDashboard: React.FC = () => {
   const yoyComparison = calculateYoYComparison(entries, selectedYear, selectedYear - 1)
     .filter(item => item.persona !== SLEEP_PERSONA);
 
-  // Pie chart data - with percentage and hours
+  // Pie chart data - with percentage, hours, and explicit color
   const pieData = personaSummaries.map((p) => ({
     type: PERSONA_SHORT_NAMES[p.persona] || p.persona,
     value: Math.round(p.totalHours),
     percentage: p.percentageOfTotal,
     fullName: p.persona,
+    color: PERSONA_COLORS[p.persona] || '#888',
   }));
+
+  // Extract color palette for scale configuration
+  const pieColorPalette = pieData.map(p => p.color);
 
   // Monthly bar chart data
   const monthlyBarData = monthlyTrends.map((m) => ({
@@ -222,10 +226,7 @@ const PersonametryDashboard: React.FC = () => {
                   radius={0.9}
                   innerRadius={0}
                   height={300}
-                  color={(type: string) => {
-                    const persona = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === type)?.[0];
-                    return persona ? PERSONA_COLORS[persona] : '#888';
-                  }}
+                  scale={{ color: { range: pieColorPalette } }}
                   label={false}
                   legend={false}
                   statistic={false}
@@ -241,8 +242,6 @@ const PersonametryDashboard: React.FC = () => {
               <Col span={12}>
                 <div style={{ paddingTop: 20 }}>
                   {pieData.map((item) => {
-                    const persona = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === item.type)?.[0];
-                    const color = persona ? PERSONA_COLORS[persona] : '#888';
                     return (
                       <div 
                         key={item.type} 
@@ -255,7 +254,7 @@ const PersonametryDashboard: React.FC = () => {
                         }}
                       >
                         <Space size={8}>
-                          <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: color }} />
+                          <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: item.color }} />
                           <Text style={{ fontSize: 13 }}>{item.type}</Text>
                         </Space>
                         <Space size={12}>

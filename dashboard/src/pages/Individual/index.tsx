@@ -336,15 +336,7 @@ const IndividualPage: React.FC = () => {
                   data={analysis.activityBreakdown}
                   angleField="hours"
                   colorField="category"
-                  color={(category: string) => {
-                    const colorMap: Record<string, string> = {
-                      'Health & Fitness': '#52c41a',
-                      'Learning': '#1890ff',
-                      'Hobbies & Creative': '#722ed1',
-                      'Spiritual': '#faad14',
-                    };
-                    return colorMap[category] || '#999';
-                  }}
+                  scale={{ color: { range: analysis.activityBreakdown.map(item => item.color) } }}
                   radius={1}
                   innerRadius={0}
                   label={false}

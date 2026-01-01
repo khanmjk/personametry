@@ -339,3 +339,26 @@
   - **Never hardcode "defaults" without empirical evidence.**
   - The correct approach would have been to use the browser developer tools to _extract_ the specific hex codes from the rendered SVG slices (`<path fill="...">`) for all data points, and _then_ use those exact values for the Legend Sync.
   - **Time Management**: 3 hours were lost fighting the library's override mechanism instead of simply observing its output and mimicking it.
+
+### 17:30 - The REAL Fix: G2 Scale Configuration ✅
+
+- **Solution Discovery**: Web research revealed that G2 v5 (used by `@ant-design/charts` v2+) requires using the `scale` configuration for reliable color mapping, NOT the `color` prop.
+- **Implementation**:
+  - **Before (IGNORED by library)**:
+    ```tsx
+    color={data.map(item => item.color)}
+    ```
+  - **After (WORKS)**:
+    ```tsx
+    scale={{ color: { range: data.map(item => item.color) } }}
+    ```
+- **Files Modified**:
+  - `Trends/index.tsx` - Work-Life Balance pie
+  - `Individual/index.tsx` - Activity Distribution pie
+  - `Personametry/index.tsx` - Time Distribution pie (also added color to pieData object)
+  - `WorkLifePie.tsx` - Added custom legend table + scale configuration
+- **Verification**: Browser testing confirmed ALL pie charts now have matching legend colors.
+  - Dashboard Time Distribution: ✅ MATCH
+  - Trends Work-Life Balance: ✅ MATCH
+  - Individual Activity Distribution: ✅ MATCH
+- **Key Learning**: G2Plot v5 deprecates the direct `color` prop in favor of `scale.color.range` for ordinal color mapping.

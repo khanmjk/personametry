@@ -149,10 +149,7 @@ const TrendsPage: React.FC = () => {
                   radius={0.9}
                   innerRadius={0} // Full Pie as per Dashboard standard
                   height={280}
-                  color={({ type }: { type: string }) => {
-                     const item = workLifeData.find(d => d.type === type);
-                     return item?.color || '#888';
-                  }}
+                  scale={{ color: { range: workLifeData.map(item => item.color) } }}
                   label={false}
                   legend={false}
                   statistic={false}

@@ -58,10 +58,7 @@ const WorkLifePie: React.FC<WorkLifePieProps> = ({
     radius: 0.85,
     innerRadius: 0.6,
     height: height - 50,
-    color: (datum: { type: string }) => {
-      const item = data.find((d) => d.type === datum.type);
-      return item?.color || '#888';
-    },
+    scale: { color: { range: data.map(d => d.color) } },
     label: {
       text: (datum: { type: string; value: number }) => {
         const pct = totalHours > 0 ? ((datum.value / totalHours) * 100).toFixed(0) : '0';
@@ -72,9 +69,7 @@ const WorkLifePie: React.FC<WorkLifePieProps> = ({
         fontSize: 12,
       },
     },
-    legend: {
-      position: 'bottom' as const,
-    },
+    legend: false as const,
     statistic: {
       title: {
         content: balanceStatus.text,
@@ -110,7 +105,33 @@ const WorkLifePie: React.FC<WorkLifePieProps> = ({
       }
       style={{ height }}
     >
-      <Pie {...config} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ flex: 1 }}>
+          <Pie {...config} />
+        </div>
+        <div style={{ width: 140 }}>
+          {data.map((item) => (
+            <div 
+              key={item.type} 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                padding: '6px 0',
+                borderBottom: '1px solid #f0f0f0',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: item.color }} />
+                <span style={{ fontSize: 13 }}>{item.type}</span>
+              </span>
+              <span style={{ fontSize: 12, color: '#666' }}>
+                {totalHours > 0 ? Math.round((item.value / totalHours) * 100) : 0}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </Card>
   );
 };
