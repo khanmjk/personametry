@@ -19,7 +19,7 @@ const Settings: ProLayoutProps & {
   title: 'Personametry',
   pwa: false,
   // Custom logo - P icon
-  logo: 'https://img.icons8.com/fluency/96/p.png',
+  logo: '/logo.png',
   iconfontUrl: '',
   token: {
     // Executive color tokens
