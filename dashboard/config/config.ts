@@ -23,6 +23,9 @@ export default defineConfig({
    * @doc https://umijs.org/docs/api/config#hash
    */
   hash: true,
+  history: {
+    type: 'hash',
+  },
 
   publicPath: PUBLIC_PATH,
 
