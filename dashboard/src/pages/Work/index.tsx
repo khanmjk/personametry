@@ -3,8 +3,9 @@ import { Col, Row, Card, Statistic, Select } from 'antd';
 import React, { useEffect, useState } from 'react';
 import {
   calculateWorkPatterns,
-  getAllEntries,
+  loadTimeEntries,
   getAvailableYears,
+  getDataSource,
   WorkPatternAnalysis,
 } from '@/services/personametryService';
 import WorkHeatmap from '@/components/charts/WorkHeatmap';
@@ -24,7 +25,9 @@ const WorkPage: React.FC = () => {
     async function fetchData() {
       try {
         setLoading(true);
-        const entries = await getAllEntries();
+        const source = getDataSource();
+        const data = await loadTimeEntries(source);
+        const entries = data.entries;
         setAllEntries(entries);
         
         const availableYears = getAvailableYears(entries);
