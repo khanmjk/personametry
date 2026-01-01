@@ -585,3 +585,217 @@ export function calculateWorkPatterns(entries: TimeEntry[], year?: number): Work
     }
   };
 }
+
+// ============================================
+// INDIVIDUAL PERSONA ANALYSIS (P2 + Spiritual)
+// ============================================
+
+// Activity category mapping for Individual persona
+const INDIVIDUAL_ACTIVITY_CATEGORIES: Record<string, string> = {
+  '[Individual] Health, Fitness & Wellbeing': 'Health & Fitness',
+  '[Individual] Knowledge-Base - Books/Video/Podcasts': 'Learning',
+  '[Individual] Me Time (Bootup, Nothing, PC/Surfing, Journalling, Hobbies, Blogging, DIY, Netflix, Silence - Alone Time)': 'Hobbies & Creative',
+  '[Individual] Spirituality': 'Spiritual',
+};
+
+// RAG thresholds for self-care (hours per week)
+const SELF_CARE_THRESHOLDS = {
+  green: 10,  // >10h/week = thriving
+  amber: 5,   // 5-10h/week = maintenance
+  // <5h/week = red (neglecting self)
+};
+
+export interface ActivityBreakdown {
+  category: string;
+  hours: number;
+  percentage: number;
+  color: string;
+}
+
+export interface WeeklyScore {
+  week: string;
+  year: number;
+  weekNum: number;
+  hours: number;
+  ragStatus: 'green' | 'amber' | 'red';
+}
+
+export interface FitnessStreak {
+  startDate: string;
+  endDate: string;
+  length: number;
+}
+
+export interface IndividualAnalysis {
+  totalHours: number;
+  avgWeeklyHours: number;
+  activityBreakdown: ActivityBreakdown[];
+  monthlyTrend: { month: string; hours: number }[];
+  weeklyScores: WeeklyScore[];
+  fitnessStreaks: FitnessStreak[];
+  fitnessConsistencyPct: number;
+  stats: {
+    bestFitnessStreak: number;
+    weeksWithGoodStreak: number;
+    totalWeeks: number;
+  };
+}
+
+const ACTIVITY_COLORS: Record<string, string> = {
+  'Health & Fitness': '#52c41a',
+  'Learning': '#1890ff',
+  'Hobbies & Creative': '#722ed1',
+  'Spiritual': '#faad14',
+};
+
+/**
+ * Calculate Individual persona patterns and self-care metrics
+ * Includes P2 Individual + P1 Muslim (Spiritual) entries
+ */
+export function calculateIndividualPatterns(
+  entries: TimeEntry[],
+  year?: number
+): IndividualAnalysis {
+  // Filter for Individual persona (P2) + Spiritual (P1 Muslim)
+  const INDIVIDUAL_PERSONA = 'P2 Individual';
+  const SPIRITUAL_PERSONA = 'P1 Muslim';
+  
+  let individualEntries = entries.filter(
+    e => e.prioritisedPersona === INDIVIDUAL_PERSONA || e.prioritisedPersona === SPIRITUAL_PERSONA
+  );
+  
+  if (year) {
+    individualEntries = filterByYear(individualEntries, year);
+  }
+
+  // Total hours
+  const totalHours = sumHours(individualEntries);
+
+  // Activity breakdown by category
+  const categoryHours: Record<string, number> = {};
+  for (const entry of individualEntries) {
+    const category = INDIVIDUAL_ACTIVITY_CATEGORIES[entry.normalisedTask] || 'Other';
+    categoryHours[category] = (categoryHours[category] || 0) + entry.hours;
+  }
+
+  const activityBreakdown: ActivityBreakdown[] = Object.entries(categoryHours)
+    .map(([category, hours]) => ({
+      category,
+      hours,
+      percentage: totalHours > 0 ? Math.round((hours / totalHours) * 100) : 0,
+      color: ACTIVITY_COLORS[category] || '#999',
+    }))
+    .sort((a, b) => b.hours - a.hours);
+
+  // Monthly trend
+  const monthlyMap: Record<string, number> = {};
+  for (const entry of individualEntries) {
+    const monthKey = dayjs(entry.date).format('YYYY-MM');
+    monthlyMap[monthKey] = (monthlyMap[monthKey] || 0) + entry.hours;
+  }
+  const monthlyTrend = Object.entries(monthlyMap)
+    .map(([month, hours]) => ({ month, hours: Math.round(hours) }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+
+  // Weekly scores with RAG classification
+  const weeklyMap: Record<string, { hours: number; year: number; weekNum: number }> = {};
+  for (const entry of individualEntries) {
+    const d = dayjs(entry.date);
+    const weekKey = `${d.isoWeekYear()}-W${d.isoWeek().toString().padStart(2, '0')}`;
+    if (!weeklyMap[weekKey]) {
+      weeklyMap[weekKey] = { hours: 0, year: d.isoWeekYear(), weekNum: d.isoWeek() };
+    }
+    weeklyMap[weekKey].hours += entry.hours;
+  }
+
+  const weeklyScores: WeeklyScore[] = Object.entries(weeklyMap)
+    .map(([week, data]) => {
+      let ragStatus: 'green' | 'amber' | 'red';
+      if (data.hours >= SELF_CARE_THRESHOLDS.green) {
+        ragStatus = 'green';
+      } else if (data.hours >= SELF_CARE_THRESHOLDS.amber) {
+        ragStatus = 'amber';
+      } else {
+        ragStatus = 'red';
+      }
+      return {
+        week,
+        year: data.year,
+        weekNum: data.weekNum,
+        hours: Math.round(data.hours * 10) / 10,
+        ragStatus,
+      };
+    })
+    .sort((a, b) => a.week.localeCompare(b.week));
+
+  const avgWeeklyHours = weeklyScores.length > 0 
+    ? weeklyScores.reduce((sum, w) => sum + w.hours, 0) / weeklyScores.length 
+    : 0;
+
+  // Fitness streaks (3+ consecutive days with Health & Fitness activity)
+  const HEALTH_TASK = '[Individual] Health, Fitness & Wellbeing';
+  const fitnessEntries = individualEntries.filter(e => e.normalisedTask === HEALTH_TASK);
+  
+  const fitnessDays = new Set(fitnessEntries.map(e => e.date));
+  const sortedFitnessDays = [...fitnessDays].sort();
+  
+  const fitnessStreaks: FitnessStreak[] = [];
+  let streakStart = '';
+  let streakLength = 0;
+  
+  for (let i = 0; i < sortedFitnessDays.length; i++) {
+    const current = sortedFitnessDays[i];
+    const prev = i > 0 ? sortedFitnessDays[i - 1] : null;
+    
+    if (prev && dayjs(current).diff(dayjs(prev), 'day') === 1) {
+      streakLength++;
+    } else {
+      // Save previous streak if >= 3 days
+      if (streakLength >= 3) {
+        fitnessStreaks.push({
+          startDate: streakStart,
+          endDate: sortedFitnessDays[i - 1],
+          length: streakLength,
+        });
+      }
+      streakStart = current;
+      streakLength = 1;
+    }
+  }
+  // Final streak
+  if (streakLength >= 3 && sortedFitnessDays.length > 0) {
+    fitnessStreaks.push({
+      startDate: streakStart,
+      endDate: sortedFitnessDays[sortedFitnessDays.length - 1],
+      length: streakLength,
+    });
+  }
+
+  // Calculate fitness consistency (% of weeks with at least one 3+ day streak)
+  const weeksWithGoodStreak = new Set<string>();
+  for (const streak of fitnessStreaks) {
+    const startWeek = dayjs(streak.startDate).format('YYYY-[W]WW');
+    weeksWithGoodStreak.add(startWeek);
+  }
+  const fitnessConsistencyPct = weeklyScores.length > 0 
+    ? Math.round((weeksWithGoodStreak.size / weeklyScores.length) * 100) 
+    : 0;
+
+  return {
+    totalHours,
+    avgWeeklyHours: Math.round(avgWeeklyHours * 10) / 10,
+    activityBreakdown,
+    monthlyTrend,
+    weeklyScores,
+    fitnessStreaks,
+    fitnessConsistencyPct,
+    stats: {
+      bestFitnessStreak: fitnessStreaks.length > 0 
+        ? Math.max(...fitnessStreaks.map(s => s.length)) 
+        : 0,
+      weeksWithGoodStreak: weeksWithGoodStreak.size,
+      totalWeeks: weeklyScores.length,
+    },
+  };
+}
+

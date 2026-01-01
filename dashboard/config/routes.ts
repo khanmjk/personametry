@@ -42,7 +42,14 @@ export default [
     icon: 'team',
     component: './Personas',
   },
-  // Gains & Losses (Comparison)
+  // Individual Persona (Self Investment)
+  {
+    path: '/individual',
+    name: 'Individual',
+    icon: 'heart',
+    component: './Individual',
+  },
+  // Work Persona
   {
     path: '/work',
     name: 'Work',
