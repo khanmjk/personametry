@@ -101,6 +101,16 @@ export interface YearlyComparison {
 }
 
 /**
+ * Weekly trend data point
+ */
+export interface WeeklyTrend {
+  year: number;
+  week: number;
+  hours: number;
+  startDate: string; // ISO date of start of week
+}
+
+/**
  * Monthly trend data point
  */
 export interface MonthlyTrend {

@@ -131,3 +131,13 @@
   - **All Time Page**: Refactored "Hours by Year & Persona" chart to use `YearlyStackedBar` (grouped variant), fixing color issues and ensuring consistency with Trends page.
   - **Verification**: Verified color consistency with User. Confirmed that Chart employs `YEAR_COLORS` (for temporal differentiation) while Table employs `PERSONA_COLORS` (for categorical identification). Design approved.
   - **Pie Chart Standardization**: Refactored Trends "Work-Life Balance" component to match Dashboard "Time Distribution" UX (Full Pie + Side Legend Table). Updated `agent-coding-contract.md` with Rule 5.4.
+
+### 08:00 - Personas Page Enhancements
+
+- **Feature Implementation**:
+  - Implemented dynamic "Detail View" charts mimicking QuickSight.
+  - Added `PersonaDetailCharts` component with "Professional" (3-Year Weekly/Monthly) and "Standard" (2-Year Monthly) variants.
+  - Added `groupByWeek` service helper using `dayjs` and `isoWeek`.
+  - Integrated seamlessly into Personas page layout.
+  - Verified strict `YEAR_COLORS` compliance and correct data aggregation.
+- **Regression Fix**: Restored the "Detail View" monthly breakdown chart that was accidentally removed. The page now correctly shows the top-card summary chart AND the detailed bottom charts.

@@ -10,9 +10,16 @@ import type {
   PersonaSummary,
   YearlyComparison,
   MonthlyTrend,
+  WeeklyTrend,
   PeriodSummary,
 } from '@/models/personametry';
 import { MetaWorkLife, PERSONA_COLORS, PERSONA_SHORT_NAMES } from '@/models/personametry';
+import dayjs from 'dayjs';
+import weekOfYear from 'dayjs/plugin/weekOfYear';
+import isoWeek from 'dayjs/plugin/isoWeek';
+
+dayjs.extend(weekOfYear);
+dayjs.extend(isoWeek);
 
 // ============================================
 // DATA SOURCES - A/B Testing Support
@@ -202,6 +209,49 @@ export function groupByMonth(entries: TimeEntry[]): MonthlyTrend[] {
   return Array.from(monthlyData.values()).sort((a, b) => {
     if (a.year !== b.year) return a.year - b.year;
     return a.month - b.month;
+  });
+  return Array.from(monthlyData.values()).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
+}
+
+/**
+ * Group entries by week within a year
+ */
+export function groupByWeek(entries: TimeEntry[]): WeeklyTrend[] {
+  const weeklyData = new Map<string, WeeklyTrend>();
+  
+  for (const entry of entries) {
+    const date = dayjs(entry.date);
+    const week = date.isoWeek();
+    
+    // Handle end-of-year edge cases where ISO week might belong to next/prev year
+    // For simplicity in this visualization, we assume entry.year unless week is 1/52 incongruence.
+    // Actually, dayjs.isoWeekYear() is safer.
+    const year = date.isoWeekYear(); 
+    
+    const key = `${year}-W${week.toString().padStart(2, '0')}`;
+    const existing = weeklyData.get(key);
+    
+    if (existing) {
+      existing.hours += entry.hours;
+    } else {
+      // Find start of week (Monday)
+      const startDate = date.startOf('isoWeek').format('YYYY-MM-DD');
+      
+      weeklyData.set(key, {
+        year,
+        week,
+        hours: entry.hours,
+        startDate
+      });
+    }
+  }
+  
+  return Array.from(weeklyData.values()).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.week - b.week;
   });
 }
 

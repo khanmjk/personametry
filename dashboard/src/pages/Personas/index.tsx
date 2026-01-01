@@ -6,13 +6,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Spin, Alert, Select, Statistic, Tag, Table, Progress, Space } from 'antd';
+import { Row, Col, Spin, Alert, Select, Statistic, Tag, Table, Progress, Space, Typography } from 'antd';
 import { Column } from '@ant-design/charts';
 import {
   RiseOutlined,
   FallOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
+import PersonaDetailCharts from '@/components/charts/PersonaDetailCharts';
 import type { TimeEntry, PersonaSummary } from '@/models/personametry';
 import { PERSONA_COLORS, PERSONA_SHORT_NAMES } from '@/models/personametry';
 import {
@@ -25,6 +26,8 @@ import {
   formatHours,
   getDataSource,
 } from '@/services/personametryService';
+
+const { Text } = Typography;
 
 const PersonasPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -64,19 +67,19 @@ const PersonasPage: React.FC = () => {
   const personaEntries = filterByPersona(yearEntries, selectedPersona);
   const monthlyData = groupByMonth(personaEntries);
 
-  // Previous year data for comparison
+  // Monthly chart data (Restored)
+  const monthlyChartData = monthlyData.map(m => ({
+    month: m.monthName,
+    hours: Math.round(m.hours * 10) / 10,
+  }));
+  
+  // Stats calculations
   const prevYearEntries = filterByYear(entries, selectedYear - 1);
   const prevSummaries = groupByPersona(prevYearEntries);
   const prevPersonaHours = prevSummaries.find(p => p.persona === selectedPersona)?.totalHours || 0;
   const currentPersonaHours = personaSummaries.find(p => p.persona === selectedPersona)?.totalHours || 0;
   const deltaHours = currentPersonaHours - prevPersonaHours;
   const deltaPercent = prevPersonaHours > 0 ? ((deltaHours / prevPersonaHours) * 100) : 0;
-
-  // Monthly chart data
-  const monthlyChartData = monthlyData.map(m => ({
-    month: m.monthName,
-    hours: Math.round(m.hours * 10) / 10,
-  }));
 
   // Table columns for persona summary
   const tableColumns = [
@@ -214,9 +217,9 @@ const PersonasPage: React.FC = () => {
                 />
               </Col>
             </Row>
-
+             
             <div style={{ marginTop: 24 }}>
-              <h4>Monthly Breakdown</h4>
+              <Text strong>Monthly Breakdown ({selectedYear})</Text>
               <Column
                 data={monthlyChartData}
                 xField="month"
@@ -232,6 +235,13 @@ const PersonasPage: React.FC = () => {
           </ProCard>
         </Col>
       </Row>
+
+      {/* NEW: Detailed Charts Section */}
+      <PersonaDetailCharts 
+        entries={entries} 
+        persona={selectedPersona} 
+        currentYear={selectedYear} 
+      />
     </PageContainer>
   );
 };
