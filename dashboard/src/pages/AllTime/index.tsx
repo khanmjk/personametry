@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Spin, Alert, Statistic, Typography, Divider, Table, Space } from 'antd';
+import { Row, Col, Spin, Alert, Statistic, Typography, Divider, Table, Space, Select } from 'antd';
 import { Column, Line } from '@ant-design/charts';
 import YearlyStackedBar from '@/components/charts/YearlyStackedBar';
 import {
@@ -42,6 +42,7 @@ const AllTimePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedPersona, setSelectedPersona] = useState<string>('ALL');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,20 +64,30 @@ const AllTimePage: React.FC = () => {
   // Exclude sleep from all metrics
   const entriesExcludingSleep = entries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
   
-  // Total metrics
-  const totalHours = sumHours(entriesExcludingSleep);
-  const totalEntries = entriesExcludingSleep.length;
+  // Get unique personas for dropdown
+  const uniquePersonas = [...new Set(entriesExcludingSleep.map(e => e.prioritisedPersona))].sort();
+  
+  // Apply persona filter
+  const filteredEntries = selectedPersona === 'ALL' 
+    ? entriesExcludingSleep 
+    : entriesExcludingSleep.filter(e => e.prioritisedPersona === selectedPersona);
+  
+  // Total metrics (use filtered data)
+  const totalHours = sumHours(filteredEntries);
+  const totalEntries = filteredEntries.length;
   const yearCount = availableYears.length;
   const avgPerYear = totalHours / yearCount;
 
-  // Persona breakdown across all years
-  const personaSummaries = groupByPersona(entriesExcludingSleep);
+  // Persona breakdown across all years (still show all personas for context when filtering)
+  const personaSummaries = selectedPersona === 'ALL' 
+    ? groupByPersona(entriesExcludingSleep)
+    : groupByPersona(filteredEntries);
 
 
 
-  // Yearly totals for trend line
+  // Yearly totals for trend line (use filtered data)
   const yearlyTotals = availableYears.map(year => {
-    const yearData = filterByYear(entries, year).filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
+    const yearData = filterByYear(filteredEntries, year);
     return {
       year: year.toString(),
       hours: Math.round(sumHours(yearData)),
@@ -159,6 +170,21 @@ const AllTimePage: React.FC = () => {
           </span>
         ),
         subTitle: `${availableYears[availableYears.length - 1]} - ${availableYears[0]}`,
+        extra: [
+          <Select
+            key="persona-filter"
+            value={selectedPersona}
+            onChange={setSelectedPersona}
+            style={{ width: 200 }}
+            options={[
+              { label: 'All Personas', value: 'ALL' },
+              ...uniquePersonas.map(p => ({ 
+                label: PERSONA_SHORT_NAMES[p] || p, 
+                value: p 
+              }))
+            ]}
+          />
+        ],
       }}
     >
       {/* KPI Row */}
@@ -255,8 +281,8 @@ const AllTimePage: React.FC = () => {
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
         <Col xs={24} lg={14}>
           <YearlyStackedBar
-            entries={entriesExcludingSleep}
-            title="Hours by Year & Persona"
+            entries={filteredEntries}
+            title={selectedPersona === 'ALL' ? 'Hours by Year & Persona' : `Hours by Year (${PERSONA_SHORT_NAMES[selectedPersona] || selectedPersona})`}
             height={420}
             variant="grouped"
           />
