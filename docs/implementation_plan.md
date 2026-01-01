@@ -318,6 +318,17 @@ personametry/
 - [ ] Responsive grid layout
 - [ ] Page navigation with sidebar
 
+### Phase 6b: Deep Dive Pages (New Request)
+
+### Phase 6b: Deep Dive Pages (New Request)
+
+- [ ] **Gains/Losses Page**: Comparative view of time reallocation.
+  - **Visualization**: Diverging Column Chart (Waterfall-style) showing YoY delta.
+  - **Logic**: Positive (Blue) vs Negative (Red) change from previous year.
+  - **Controls**: Year selector (compares Selected Year vs Selected Year - 1).
+- [ ] **Work Metrics Page**: Deep dive into professional persona (trends, intensity, projects)
+- [ ] **Individual Page**: Dedicated analytics for P2 Individual (self-improvement, hobbies)
+
 ### Phase 7: Polish & Documentation (Est. 2 hours)
 
 - [ ] Theme customization (colors matching personas)

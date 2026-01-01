@@ -141,3 +141,15 @@
   - Integrated seamlessly into Personas page layout.
   - Verified strict `YEAR_COLORS` compliance and correct data aggregation.
 - **Regression Fix**: Restored the "Detail View" monthly breakdown chart that was accidentally removed. The page now correctly shows the top-card summary chart AND the detailed bottom charts.
+
+### 08:30 - Gains/Losses Page Implementation
+
+- **Features**:
+  - NEW: `GainsLosses` page with Year-over-Year waterfall-style comparison.
+  - Components: `YoYComparisonBar` (refactored to vertical Column chart) and detailed Variance Table.
+  - Logic: Calculates variance (delta) and % change between selected years.
+  - UX: Diverging bars for Gains (Green) vs Losses (Red). _Note: Coloring currently defaults to blue, requires rendering tweak._
+  - Route: Added `/gains-losses` to navigation.
+  - **Status**: Chart orientation verified (vertical). Color rendering proved stubborn. Attempted `seriesField`, `color` callback, `theme` override, `columnStyle`, and finally `style` prop to force Green/Red.
+  - **Status**: Chart orientation verified (vertical). Color rendering proved stubborn. Attempted `seriesField`, `color` callback, `theme` override, `columnStyle`, and `style` prop. All failed (Blue/Cyan).
+  - **Final Fix**: Adopted `colorField: 'persona'` with an external Map lookup inside the color callback to strictly enforce Green/Red based on delta values.
