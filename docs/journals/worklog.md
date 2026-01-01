@@ -153,3 +153,46 @@
   - **Status**: Chart orientation verified (vertical). Color rendering proved stubborn. Attempted `seriesField`, `color` callback, `theme` override, `columnStyle`, and finally `style` prop to force Green/Red.
   - **Status**: Chart orientation verified (vertical). Color rendering proved stubborn. Attempted `seriesField`, `color` callback, `theme` override, `columnStyle`, and `style` prop. All failed (Blue/Cyan).
   - **Final Fix**: Adopted `colorField: 'persona'` with an external Map lookup inside the color callback to strictly enforce Green/Red based on delta values.
+
+---
+
+## 2026-01-01 (Day 2)
+
+### 08:00 - Work Persona Page Implementation
+
+- **Objective**: Create deep-dive analysis for Professional persona with work intensity metrics.
+- **Research**:
+  - Verified 100% `endedAt` timestamp availability for P3 Professional entries (2018-2024).
+  - Confirmed feasibility of Late Night Analysis (>7PM) and Burnout Streak metrics.
+- **Service Layer**:
+  - Implemented `calculateWorkPatterns()` in `personametryService.ts`.
+  - Added helpers: `parseTime()`, `calculateStreak()`.
+  - New interfaces: `Streak`, `LateDayMetric`, `WorkPatternAnalysis`.
+- **Components Created**:
+  - `WorkHeatmap.tsx` - Custom CSS Grid heatmap (replaced broken Ant Heatmap).
+  - `LateNightChart.tsx` - Column chart for late days by day of week.
+  - `StreakHistogram.tsx` - Distribution of burnout streak lengths.
+- **WorkPage Assembly**:
+  - KPI cards: Late Days, Max Streak, Avg Daily Hours.
+  - Year dropdown filter (detail charts filter by year, heatmap shows full history).
+  - Sidebar icon fixed from broken `briefcase` to `schedule`.
+- **RAG Heatmap (SA Labour Law)**:
+  - Researched South African Basic Conditions of Employment Act (BCEA).
+  - Normal hours: 45h/week = ~195h/month; With overtime: 55h/week = ~238h/month max.
+  - Thresholds: Green <175h (healthy), Amber 175-200h (approaching limit), Red >200h (excessive).
+  - Custom CSS Grid with legend and proper spacing.
+- **Commits**:
+  - `feat: implement Work Persona page with heatmap, late days, and streaks`
+  - `fix: Work page UX - icon, heatmap colors, year filter, P3 theming`
+  - `fix: WorkHeatmap - swap axes, Blue-Red gradient, month names`
+  - `feat: Work Persona Page with RAG heatmap based on SA labour law thresholds`
+
+### 11:39 - All Time Page Persona Filter
+
+- **Objective**: Add dropdown filter to filter all dashboard elements by persona.
+- **Implementation**:
+  - Added `Select` component in PageContainer header (defaults to "All Personas").
+  - Added `selectedPersona` state with filter logic.
+  - All KPIs, trend chart, stacked bar chart, and persona table now filter dynamically.
+  - Dynamic chart title based on selection.
+- **Commit**: `feat: Add Persona dropdown filter to All Time page`
