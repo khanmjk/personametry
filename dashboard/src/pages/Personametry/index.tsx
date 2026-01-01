@@ -84,7 +84,7 @@ const PersonametryDashboard: React.FC = () => {
   // Pie chart data - with percentage, hours, and explicit color
   const pieData = personaSummaries.map((p) => ({
     type: PERSONA_SHORT_NAMES[p.persona] || p.persona,
-    value: Math.round(p.totalHours),
+    value: p.totalHours,  // Use raw value for accurate pie proportions
     percentage: p.percentageOfTotal,
     fullName: p.persona,
     color: PERSONA_COLORS[p.persona] || '#888',
@@ -144,6 +144,17 @@ const PersonametryDashboard: React.FC = () => {
         ],
       }}
     >
+      {/* Sparse Data Indicator */}
+      {totalHours > 0 && totalHours < 10 && (
+        <Alert
+          message="Limited data for this period"
+          description={`Only ${formatHours(totalHours)} hrs logged so far. Charts will become more representative as more data is added.`}
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {/* KPI Summary Row */}
       <Row gutter={[20, 20]}>
         <Col xs={24} sm={12} md={6}>
