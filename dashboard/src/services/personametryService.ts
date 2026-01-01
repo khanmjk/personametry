@@ -367,3 +367,221 @@ export function formatHours(hours: number): string {
   }
   return hours.toFixed(1);
 }
+// ============================================
+// WORK PATTERN ANALYSIS (P3 PROFESSIONAL)
+// ============================================
+
+export interface Streak {
+  length: number;
+  startDate: string;
+  endDate: string;
+  type: 'HighWorkload' | 'LateEnd' | 'Challenging'; // >10h, >21:00, or Both
+}
+
+export interface LateDayMetric {
+  dayOfWeek: string;
+  weekNum: number;
+  count: number;
+  year: number;
+}
+
+export interface WorkPatternAnalysis {
+  workIntensityHeatmap: { year: number; month: number; hours: number }[];
+  lateDayFrequency: {
+    byDayOfWeek: { day: string; count: number }[];
+    byWeek: { week: number; count: number }[];
+  };
+  workloadStreaks: {
+    highWorkload: Streak[];
+    lateEnd: Streak[];
+    challenging: Streak[];
+  };
+  stats: {
+    totalLateDays: number;
+    maxStreakLength: number;
+    avgDailyHours: number;
+  };
+}
+
+/**
+ * Parse HH:MM time string to decimal hour (e.g. "21:30" -> 21.5)
+ */
+function parseTime(timeStr?: string): number | null {
+  if (!timeStr) return null;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  if (isNaN(hours) || isNaN(minutes)) return null;
+  return hours + minutes / 60;
+}
+
+/**
+ * Calculate Work Patterns for P3 Professional
+ * Filters specifically for P3 and expects endedAt data.
+ */
+export function calculateWorkPatterns(entries: TimeEntry[], year?: number): WorkPatternAnalysis {
+  // 1. Filter for P3 Professional
+  let p3Entries = entries.filter((e) => e.prioritisedPersona === 'P3 Professional');
+  if (year) {
+    p3Entries = p3Entries.filter((e) => e.year === year);
+  }
+
+  // 2. Aggregate Daily Data
+  // Map: Date -> { hours, endHour }
+  const dailyMap = new Map<string, { date: string; hours: number; endHour: number | null; dayOfWeek: string; weekNum: number; month: number; year: number }>();
+
+  for (const entry of p3Entries) {
+    const existing = dailyMap.get(entry.date) || { 
+      date: entry.date, 
+      hours: 0, 
+      endHour: null,
+      dayOfWeek: entry.dayOfWeek,
+      weekNum: entry.weekNum,
+      month: entry.monthNum,
+      year: entry.year
+    };
+
+    existing.hours += entry.hours;
+    
+    // Track latest end time for the day
+    const entryEnd = parseTime(entry.endedAt);
+    if (entryEnd !== null) {
+      if (existing.endHour === null || entryEnd > existing.endHour) {
+        existing.endHour = entryEnd;
+      }
+    }
+
+    dailyMap.set(entry.date, existing);
+  }
+
+  const dailyData = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+  // 3. Heatmap Data (Monthly Sums)
+  // Format: { year, month, hours }
+  const heatmapMap = new Map<string, { year: number; month: number; hours: number }>();
+  for (const day of dailyData) {
+    const key = `${day.year}-${day.month}`;
+    const existing = heatmapMap.get(key) || { year: day.year, month: day.month, hours: 0 };
+    existing.hours += day.hours;
+    heatmapMap.set(key, existing);
+  }
+  const workIntensityHeatmap = Array.from(heatmapMap.values());
+
+  // 4. Late Day Analysis (> 19:00 / 7 PM)
+  const LATE_THRESHOLD = 19.0;
+  const lateDays = dailyData.filter(d => d.endHour !== null && d.endHour >= LATE_THRESHOLD);
+
+  const lateByDay = new Map<string, number>();
+  const lateByWeek = new Map<string, { week: number; count: number }>(); // Key: Year-Week
+
+  for (const day of lateDays) {
+    // Day of Week
+    lateByDay.set(day.dayOfWeek, (lateByDay.get(day.dayOfWeek) || 0) + 1);
+
+    // Week Number (Accumulate count per week)
+    const weekKey = `${day.year}-${day.weekNum}`;
+    const existingWeek = lateByWeek.get(weekKey) || { week: day.weekNum, count: 0 };
+    existingWeek.count++;
+    lateByWeek.set(weekKey, existingWeek);
+  }
+
+  // Ensure all days of week are present (even if 0)
+  const ORDERED_DAYS = ['_01 Monday', '_02 Tuesday', '_03 Wednesday', '_04 Thursday', '_05 Friday', '_06 Saturday', '_07 Sunday'];
+  const lateDayFrequency = {
+    byDayOfWeek: ORDERED_DAYS.map(day => ({
+      day: day.replace(/_\d\d\s/, ''), // Remove prefix for display
+      count: lateByDay.get(day) || 0
+    })),
+    byWeek: Array.from(lateByWeek.values())
+  };
+
+  // 5. Streak Analysis
+  // High Workload (> 10h), Late End (> 21:00 / 9 PM)
+  const HIGH_WORK_THRESHOLD = 10.0;
+  const LATE_END_STREAK_THRESHOLD = 21.0;
+
+  const streaks = {
+    highWorkload: [] as Streak[],
+    lateEnd: [] as Streak[],
+    challenging: [] as Streak[]
+  };
+
+  let currentHighWorkStreak = 0;
+  let currentLateEndStreak = 0;
+  
+  // Sort simply by date (assuming consecutive days are contiguous in array? No, need to check date gaps)
+  // For simplicity, we iterate and check if next day is next calendar day. 
+  // Actually, standard streak logic usually allows weekends gaps? Or strict consecutive?
+  // Let's assume STRICT consecutive calendar days for now.
+
+  const calculateStreaks = (condition: (d: typeof dailyData[0]) => boolean): Streak[] => {
+    const foundStreaks: Streak[] = [];
+    let currentStreak: typeof dailyData = [];
+
+    for (let i = 0; i < dailyData.length; i++) {
+      const day = dailyData[i];
+      if (condition(day)) {
+        // Check if contiguous with previous
+        if (currentStreak.length > 0) {
+          const prevDay = currentStreak[currentStreak.length - 1];
+          const diff = dayjs(day.date).diff(dayjs(prevDay.date), 'day');
+          if (diff === 1) {
+            currentStreak.push(day);
+          } else {
+            // Gap found, verify streak
+            if (currentStreak.length >= 2) {
+              foundStreaks.push({
+                length: currentStreak.length,
+                startDate: currentStreak[0].date,
+                endDate: currentStreak[currentStreak.length - 1].date,
+                type: 'HighWorkload' // Placeholder type
+              });
+            }
+            currentStreak = [day];
+          }
+        } else {
+          currentStreak = [day];
+        }
+      } else {
+        // Condition fail, close streak
+        if (currentStreak.length >= 2) {
+          foundStreaks.push({
+            length: currentStreak.length,
+            startDate: currentStreak[0].date,
+            endDate: currentStreak[currentStreak.length - 1].date,
+            type: 'HighWorkload'
+          });
+        }
+        currentStreak = [];
+      }
+    }
+    // Final check
+    if (currentStreak.length >= 2) {
+      foundStreaks.push({
+        length: currentStreak.length,
+        startDate: currentStreak[0].date,
+        endDate: currentStreak[currentStreak.length - 1].date,
+        type: 'HighWorkload'
+      });
+    }
+    return foundStreaks;
+  };
+
+  streaks.highWorkload = calculateStreaks(d => d.hours >= HIGH_WORK_THRESHOLD)
+    .map(s => ({ ...s, type: 'HighWorkload' as const }));
+    
+  streaks.lateEnd = calculateStreaks(d => d.endHour !== null && d.endHour >= LATE_END_STREAK_THRESHOLD)
+    .map(s => ({ ...s, type: 'LateEnd' as const }));
+
+  return {
+    workIntensityHeatmap,
+    lateDayFrequency,
+    workloadStreaks: streaks,
+    stats: {
+      totalLateDays: lateDays.length,
+      maxStreakLength: Math.max(
+        ...streaks.highWorkload.map(s => s.length), 
+        ...streaks.lateEnd.map(s => s.length), 
+      0),
+      avgDailyHours: dailyData.length > 0 ? sumHours(p3Entries) / dailyData.length : 0
+    }
+  };
+}

@@ -44,6 +44,12 @@ export default [
   },
   // Gains & Losses (Comparison)
   {
+    path: '/work',
+    name: 'Work',
+    icon: 'briefcase',
+    component: './Work',
+  },
+  {
     path: '/gains-losses',
     name: 'Gains/Losses',
     icon: 'rise',
