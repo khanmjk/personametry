@@ -177,6 +177,32 @@ const CARD_STYLE = {
 
 ```
 
+### 5.5 Data Source Standardization
+
+**MANDATORY**: All pages that load data MUST follow this pattern:
+
+```typescript
+import { loadTimeEntries, getDataSource } from "@/services/personametryService";
+
+useEffect(() => {
+  async function fetchData() {
+    const source = getDataSource(); // REQUIRED: Explicit call
+    const data = await loadTimeEntries(source);
+    // ... use data.entries
+  }
+  fetchData();
+}, []);
+```
+
+**Rules:**
+
+1. ALWAYS import `getDataSource` from `personametryService`.
+2. ALWAYS call `getDataSource()` at the start of data fetching.
+3. ALWAYS pass the source explicitly to `loadTimeEntries()`.
+4. DO NOT rely on implicit defaults (e.g., `getAllEntries()` without source).
+
+**Rationale:** Ensures all pages respect the user's data source selection from the Dashboard ETL dropdown.
+
 ---
 
 ## 6. Data Sources

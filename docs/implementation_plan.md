@@ -298,7 +298,7 @@ personametry/
 
 ### Phase 4: Chart Components (Est. 4-5 hours)
 
-- [ ] `WheelOfLife` - Radar chart for persona distribution
+- [x] `WheelOfLife` - Radar chart for persona distribution (added to Dashboard)
 - [ ] `PersonaPieChart` - Donut chart for time allocation
 - [ ] `TrendLineChart` - Multi-series line for monthly trends
 - [ ] `YoYBarChart` - Grouped bar for year comparison

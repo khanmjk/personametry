@@ -196,3 +196,39 @@
   - All KPIs, trend chart, stacked bar chart, and persona table now filter dynamically.
   - Dynamic chart title based on selection.
 - **Commit**: `feat: Add Persona dropdown filter to All Time page`
+
+### 12:00 - Individual Persona Page Implementation
+
+- **Objective**: Create dedicated dashboard for P2 Individual + P1 Muslim (Spiritual) self-investment tracking.
+- **Research**:
+  - Verified WHO guidelines for wellness hours (2.5-5h physical activity/week).
+  - Researched "5-hour rule" for personal development (5h/week learning).
+  - Defined RAG thresholds: Green >10h/week, Amber 5-10h, Red <5h.
+- **Service Layer**:
+  - Implemented `calculateIndividualPatterns()` in `personametryService.ts`.
+  - Activity breakdown by category (Health, Learning, Hobbies, Spiritual).
+  - Weekly RAG score classification.
+  - Fitness streak tracking (3+ consecutive days).
+- **IndividualPage Component**:
+  - KPIs: Total Me Time, Avg Weekly (with RAG color), Fitness Consistency %, YoY Trend.
+  - Activity Distribution: Full pie chart + side legend table (Rule 5.4 compliant).
+  - Self-Investment Trend: Monthly line chart.
+  - Weekly Self-Care Score: RAG distribution with Thriving/Maintenance/Low counts.
+- **Fixes**:
+  - Fixed YoY Trend to work for single-year selections (compares selected year vs previous year).
+- **Route**: `/individual` with heart icon.
+- **Commit**: `feat: Individual Persona Page with self-investment analytics`
+
+### 12:35 - Wheel of Life Radar Chart
+
+- **Objective**: Add "Wheel of Life" spider/radar chart to Dashboard for holistic balance view.
+- **Implementation**:
+  - Added `Radar` component from `@ant-design/charts` to Dashboard page.
+  - 7-axis radar showing all personas (excluding sleep) as percentage of total hours.
+  - YoY comparison overlay: current year (green) vs previous year (orange).
+  - 35% transparency for clear overlap visibility.
+- **Dashboard Layout Optimization**:
+  - Merged Wheel of Life + YoY Comparison into single row (50/50 split).
+  - Set consistent KPI card heights (120px) for perfect alignment.
+  - Entire dashboard now fits on one page without scrolling.
+- **Commit**: `feat: Wheel of Life radar chart with YoY overlay on Dashboard`
