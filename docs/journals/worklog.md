@@ -273,3 +273,17 @@
   - Dashboard automatically deployed with 2025 data.
 - **Verification**: User confirmed "Hooray!!!" - Dashboard now shows **2023, 2024, 2025** data.
 - **Outcome**: **Full operational success.** The "pain-free" data refresh goal is achieved. 🚀
+
+### 14:30 - Creative Enhancements & Documentation
+
+- **Branding Upgrade**:
+  - Designed new App Icon: "P" constructed from horizontal bar graph bars (Purple/Teal gradient).
+  - Replaced external logo URL with local `logo.png`.
+  - **Fix**: Changed logo path to relative (`logo.png`) to fix 404 error on GitHub Pages.
+- **Agent Coding Contract**:
+  - Added **Section 11: Deployment & Hosting**.
+  - Codified rules for GitHub Pages compatibility:
+    - **Relative Paths**: Mandatory for all assets/data.
+    - **Hash Routing**: Mandatory for `config.ts`.
+    - **No `/public/` prefix**: Runtime paths must match build output structure.
+- **Status**: New branding live, documentation aligned with deployment reality.
