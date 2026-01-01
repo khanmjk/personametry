@@ -232,3 +232,33 @@
   - Set consistent KPI card heights (120px) for perfect alignment.
   - Entire dashboard now fits on one page without scrolling.
 - **Commit**: `feat: Wheel of Life radar chart with YoY overlay on Dashboard`
+
+---
+
+### 13:00 - Data Source Standardization & Operations
+
+- **Harvest Standardization**:
+  - Removed ETL dropdown from Dashboard header (Harvest is now sole source).
+  - Updated `personametryService.ts` to use Harvest as default.
+  - Verified QuickSight transformation logic is fully preserved in Python ETL.
+- **Operational Runbook**:
+  - Created `/docs/runbooks/harvest_data_refresh.md`.
+  - Documented standardized workflow: Export Harvest → Commit → Auto-Deploy.
+- **File Organization**:
+  - Standardized seedfile: `seedfiles/harvest_time_report.xlsx`.
+  - Archived old exports to `seedfiles/archive/`.
+  - Moved legacy documentation to `docs/reference/`.
+
+### 13:30 - CI/CD & Deployment Automation
+
+- **GitHub Actions Workflow**:
+  - Created `.github/workflows/deploy.yml`.
+  - Pipeline: Checkout → Setup Python/Node → Run ETL → Build Dashboard → Deploy to GitHub Pages.
+  - Upgraded workflow to use Node.js 20 (LTS) to match `package.json` engines.
+  - Fixed npm caching issues by adding `package-lock.json` to git tracking.
+- **GitHub Pages Compatibility**:
+  - **Hash Router**: Switched `config.ts` to `history: { type: 'hash' }` to fix routing on static host (preventing blank page/404s).
+  - **Relative Paths**: Updated data fetching to use relative paths (`data/...` vs `/data/...`) to support subdirectory hosting (`/personametry/`).
+- **Status**:
+  - Workflow successfully building and deploying.
+  - Live URL: https://khanmjk.github.io/personametry/
