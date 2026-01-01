@@ -26,9 +26,7 @@ import {
   getAvailableYears,
   calculateYoYComparison,
   formatHours,
-  setDataSource,
   getDataSource,
-  type DataSource,
 } from '@/services/personametryService';
 
 const { Title, Text } = Typography;
@@ -47,33 +45,26 @@ const PersonametryDashboard: React.FC = () => {
   const [metadata, setMetadata] = useState<DataMetadata | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(2022);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [dataSource, setDataSourceState] = useState<DataSource>(getDataSource());
-
-  const fetchData = async (source: DataSource) => {
-    setLoading(true);
-    try {
-      setDataSource(source);
-      const data = await loadTimeEntries(source);
-      setEntries(data.entries);
-      setMetadata(data.metadata);
-      const years = getAvailableYears(data.entries);
-      setAvailableYears(years);
-      setSelectedYear(years[0] || 2022);
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchData(dataSource);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const source = getDataSource();
+        const data = await loadTimeEntries(source);
+        setEntries(data.entries);
+        setMetadata(data.metadata);
+        const years = getAvailableYears(data.entries);
+        setAvailableYears(years);
+        setSelectedYear(years[0] || 2022);
+        setLoading(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
-
-  const handleDataSourceChange = (source: DataSource) => {
-    setDataSourceState(source);
-    fetchData(source);
-  };
 
   // Filter entries by selected year
   const yearEntries = filterByYear(entries, selectedYear);
@@ -139,16 +130,6 @@ const PersonametryDashboard: React.FC = () => {
           </span>
         ),
         extra: [
-          <Select
-            key="datasource"
-            value={dataSource}
-            onChange={handleDataSourceChange}
-            style={{ width: 120 }}
-            options={[
-              { label: 'Harvest ETL', value: 'harvest' },
-              { label: 'QuickSight', value: 'quicksight' },
-            ]}
-          />,
           <Select
             key="year"
             value={selectedYear}
