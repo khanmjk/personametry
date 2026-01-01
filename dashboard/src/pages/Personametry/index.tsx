@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
 import { Row, Col, Statistic, Select, Spin, Alert, Typography, Divider, Tag, Space } from 'antd';
-import { Column, Pie } from '@ant-design/charts';
+import { Column, Pie, Radar } from '@ant-design/charts';
 import {
   ClockCircleOutlined,
   RiseOutlined,
@@ -162,7 +162,7 @@ const PersonametryDashboard: React.FC = () => {
       {/* KPI Summary Row */}
       <Row gutter={[20, 20]}>
         <Col xs={24} sm={12} md={6}>
-          <ProCard style={CARD_STYLE}>
+          <ProCard style={{ ...CARD_STYLE, height: 120 }}>
             <Statistic
               title={<Text strong>Total Hours</Text>}
               value={formatHours(totalHours)}
@@ -170,53 +170,50 @@ const PersonametryDashboard: React.FC = () => {
               valueStyle={{ color: '#0D7377', fontSize: 28, fontWeight: 600 }}
               prefix={<ClockCircleOutlined />}
             />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">Excludes sleep</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>Excludes sleep</Text>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <ProCard style={CARD_STYLE}>
-            <div style={{ marginBottom: 8 }}>
+          <ProCard style={{ ...CARD_STYLE, height: 120 }}>
+            <div style={{ marginBottom: 6 }}>
               <Text strong style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)' }}>Top 3 Personas</Text>
-              <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>(excl. sleep)</Text>
+              <Text type="secondary" style={{ fontSize: 10, marginLeft: 4 }}>(excl. sleep)</Text>
             </div>
-            <Space direction="vertical" size={4} style={{ width: '100%' }}>
+            <Space direction="vertical" size={2} style={{ width: '100%' }}>
               {top3.map((p, i) => (
                 <div key={p.persona} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Space size={4}>
-                    <TrophyOutlined style={{ color: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32' }} />
-                    <Tag color={PERSONA_COLORS[p.persona]} style={{ margin: 0 }}>
+                    <TrophyOutlined style={{ color: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32', fontSize: 12 }} />
+                    <Tag color={PERSONA_COLORS[p.persona]} style={{ margin: 0, fontSize: 11, padding: '0 4px' }}>
                       {PERSONA_SHORT_NAMES[p.persona]}
                     </Tag>
                   </Space>
-                  <Text strong style={{ fontSize: 12 }}>{p.percentageOfTotal}%</Text>
+                  <Text strong style={{ fontSize: 11 }}>{p.percentageOfTotal}%</Text>
                 </div>
               ))}
             </Space>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <ProCard style={CARD_STYLE}>
+          <ProCard style={{ ...CARD_STYLE, height: 120 }}>
             <Statistic
               title={<Text strong>Time Entries</Text>}
               value={entryCount.toLocaleString()}
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
               prefix={<CalendarOutlined />}
             />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">{metadata?.source?.includes('harvest') ? 'Harvest' : 'QuickSight'} data</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>{metadata?.source?.includes('harvest') ? 'Harvest' : 'QuickSight'} data</Text>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <ProCard style={CARD_STYLE}>
+          <ProCard style={{ ...CARD_STYLE, height: 120 }}>
             <Statistic
               title={<Text strong>Avg. Hours/Day</Text>}
               value={(totalHours / 365).toFixed(1)}
               suffix="hrs"
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
             />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">{selectedYear}</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>{selectedYear}</Text>
           </ProCard>
         </Col>
       </Row>
@@ -326,47 +323,135 @@ const PersonametryDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* YoY Comparison Grid - EXCLUDING SLEEP */}
+      {/* Wheel of Life + YoY Comparison - Same Row 50/50 */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
-        <Col xs={24}>
+        {/* Wheel of Life - Radar Chart */}
+        <Col xs={24} lg={12}>
+          <ProCard
+            title={
+              <span>
+                <Title level={5} style={{ margin: 0, display: 'inline' }}>Wheel of Life</Title>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>(excl. sleep)</Text>
+              </span>
+            }
+            style={{ ...CARD_STYLE, height: 380 }}
+          >
+            {(() => {
+              // Calculate balance scores for radar chart
+              const prevYearEntries = filterByYear(entries, selectedYear - 1).filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
+              
+              const radarData: { persona: string; score: number; year: string }[] = [];
+              
+              // Current year data
+              personaSummaries.forEach((p) => {
+                const shortName = PERSONA_SHORT_NAMES[p.persona] || p.persona;
+                radarData.push({
+                  persona: shortName,
+                  score: p.percentageOfTotal,
+                  year: selectedYear.toString(),
+                });
+              });
+              
+              // Previous year data for comparison
+              const prevSummaries = groupByPersona(prevYearEntries);
+              prevSummaries.forEach((p) => {
+                const shortName = PERSONA_SHORT_NAMES[p.persona] || p.persona;
+                radarData.push({
+                  persona: shortName,
+                  score: p.percentageOfTotal,
+                  year: (selectedYear - 1).toString(),
+                });
+              });
+
+              return (
+                <Radar
+                  data={radarData}
+                  xField="persona"
+                  yField="score"
+                  seriesField="year"
+                  colorField="year"
+                  height={300}
+                  meta={{
+                    score: {
+                      min: 0,
+                      max: Math.max(...radarData.map(d => d.score)) + 10,
+                    },
+                  }}
+                  xAxis={{
+                    line: null,
+                    tickLine: null,
+                    label: { style: { fontSize: 11, fontWeight: 500 } },
+                  }}
+                  yAxis={{
+                    label: false,
+                    grid: { alternateColor: ['rgba(0, 0, 0, 0.02)', 'rgba(0, 0, 0, 0.04)'] },
+                  }}
+                  area={{
+                    smooth: true,
+                    style: { fillOpacity: 0.35 },
+                  }}
+                  line={{ size: 2 }}
+                  point={{ size: 3 }}
+                  color={({ year }: { year: string }) => 
+                    year === selectedYear.toString() ? '#52c41a' : '#faad14'
+                  }
+                  legend={{
+                    position: 'bottom',
+                    itemName: { style: { fontSize: 11 } },
+                  }}
+                  tooltip={{
+                    formatter: (datum: { persona: string; score: number; year: string }) => ({
+                      name: datum.year,
+                      value: `${datum.score.toFixed(1)}%`,
+                    }),
+                  }}
+                />
+              );
+            })()}
+          </ProCard>
+        </Col>
+
+        {/* YoY Comparison Grid */}
+        <Col xs={24} lg={12}>
           <ProCard
             title={
               <span>
                 <Title level={5} style={{ margin: 0, display: 'inline' }}>
-                  Year-over-Year Comparison ({selectedYear} vs {selectedYear - 1})
+                  YoY Comparison ({selectedYear} vs {selectedYear - 1})
                 </Title>
-                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>(excludes sleep)</Text>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>(excl. sleep)</Text>
               </span>
             }
-            style={CARD_STYLE}
+            style={{ ...CARD_STYLE, height: 380 }}
+            bodyStyle={{ overflow: 'auto' }}
           >
-            <Row gutter={[16, 16]}>
+            <Row gutter={[12, 12]}>
               {yoyComparison.map((item) => (
-                <Col key={item.persona} xs={24} sm={12} md={8} lg={6} xl={4}>
+                <Col key={item.persona} xs={12} sm={8}>
                   <div
                     style={{
-                      padding: 16,
-                      borderRadius: 8,
+                      padding: 12,
+                      borderRadius: 6,
                       background: '#fafafa',
-                      borderLeft: `4px solid ${PERSONA_COLORS[item.persona]}`,
+                      borderLeft: `3px solid ${PERSONA_COLORS[item.persona]}`,
                     }}
                   >
-                    <Text strong style={{ color: PERSONA_COLORS[item.persona] }}>
+                    <Text strong style={{ color: PERSONA_COLORS[item.persona], fontSize: 12 }}>
                       {PERSONA_SHORT_NAMES[item.persona]}
                     </Text>
-                    <div style={{ marginTop: 8 }}>
-                      <Text style={{ fontSize: 20, fontWeight: 600 }}>
+                    <div style={{ marginTop: 4 }}>
+                      <Text style={{ fontSize: 16, fontWeight: 600 }}>
                         {formatHours(item.currentYearHours)}
                       </Text>
-                      <Text type="secondary"> hrs</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}> hrs</Text>
                     </div>
-                    <div style={{ marginTop: 4 }}>
+                    <div style={{ marginTop: 2 }}>
                       {item.deltaHours >= 0 ? (
-                        <Text style={{ color: STATUS_COLORS.success }}>
+                        <Text style={{ color: STATUS_COLORS.success, fontSize: 11 }}>
                           <RiseOutlined /> +{formatHours(item.deltaHours)} ({item.percentageChange > 0 ? '+' : ''}{item.percentageChange}%)
                         </Text>
                       ) : (
-                        <Text style={{ color: STATUS_COLORS.error }}>
+                        <Text style={{ color: STATUS_COLORS.error, fontSize: 11 }}>
                           <FallOutlined /> {formatHours(item.deltaHours)} ({item.percentageChange}%)
                         </Text>
                       )}
