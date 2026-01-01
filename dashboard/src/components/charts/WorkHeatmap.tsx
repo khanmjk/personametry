@@ -12,14 +12,12 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 // Normal work: 45h/week = ~195h/month
 // With overtime: 55h/week = ~238h/month max
 // Green: <175h (healthy), Amber: 175-200h (approaching limit), Red: >200h (excessive)
-// Special: <12h = "ON A BREAK" (highlighted with glow)
+// Special: <12h or no data = "ON A BREAK" (green with yellow glow)
 const BREAK_THRESHOLD = 12;
 
 const getColor = (hours: number): string => {
-  if (hours < BREAK_THRESHOLD) {
-    return '#13c2c2'; // Teal - ON A BREAK (will get yellow glow)
-  } else if (hours < 175) {
-    return '#52c41a'; // Green - healthy work-life balance
+  if (hours < 175) {
+    return '#52c41a'; // Green - healthy work-life balance (includes breaks)
   } else if (hours <= 200) {
     return '#faad14'; // Amber - approaching legal limit
   } else {
@@ -65,7 +63,44 @@ const WorkHeatmap: React.FC<WorkHeatmapProps> = ({ data, height = 530 }) => {
   };
 
   return (
-    <Card title="Work Hours Heatmap" style={{ height }} bodyStyle={{ paddingBottom: '40px' }}>
+    <Card 
+      title="Work Hours Heatmap" 
+      style={{ height }} 
+      bodyStyle={{ paddingBottom: '40px' }}
+      extra={
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          fontSize: '11px',
+          color: '#666',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ 
+              width: '16px', 
+              height: '12px', 
+              backgroundColor: '#52c41a', 
+              borderRadius: '2px',
+              boxShadow: '0 0 4px 1px #fadb14',
+              border: '1px solid #fadb14',
+            }} />
+            <span>🏖️ Break</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '16px', height: '12px', backgroundColor: '#52c41a', borderRadius: '2px' }} />
+            <span>&lt;175h</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '16px', height: '12px', backgroundColor: '#faad14', borderRadius: '2px' }} />
+            <span>175-200h</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '16px', height: '12px', backgroundColor: '#f5222d', borderRadius: '2px' }} />
+            <span>&gt;200h</span>
+          </div>
+        </div>
+      }
+    >
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: `60px repeat(${years.length}, 1fr)`,
@@ -85,16 +120,17 @@ const WorkHeatmap: React.FC<WorkHeatmapProps> = ({ data, height = 530 }) => {
             {years.map(year => {
               const hours = dataMap.get(`${year}-${monthIndex + 1}`);
               const hasData = hours !== undefined;
-              const isBreak = hasData && hours < BREAK_THRESHOLD;
-              const bgColor = hasData ? getColor(hours) : '#f5f5f5';
-              const textColor = hasData ? '#fff' : '#ccc';
+              // Break = no data OR < 12h
+              const isBreak = !hasData || hours < BREAK_THRESHOLD;
+              const bgColor = hasData ? getColor(hours) : '#52c41a'; // Green for no-data too
+              const textColor = '#fff';
               
               return (
                 <Tooltip 
                   key={`${year}-${monthIndex}`} 
-                  title={hasData 
-                    ? `${monthName} ${year}: ${Math.round(hours)}h${isBreak ? ' 🏖️ ON A BREAK' : ''}` 
-                    : 'No data'
+                  title={!hasData 
+                    ? `${monthName} ${year}: 🏖️ ON A BREAK (No data)` 
+                    : `${monthName} ${year}: ${Math.round(hours)}h${hours < BREAK_THRESHOLD ? ' 🏖️ ON A BREAK' : ''}`
                   }
                 >
                   <div style={{ 
@@ -115,41 +151,6 @@ const WorkHeatmap: React.FC<WorkHeatmapProps> = ({ data, height = 530 }) => {
             })}
           </React.Fragment>
         ))}
-      </div>
-
-      {/* Color Legend */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'flex-end', 
-        marginTop: '16px',
-        fontSize: '11px',
-        color: '#666',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ 
-            width: '16px', 
-            height: '12px', 
-            backgroundColor: '#13c2c2', 
-            borderRadius: '2px',
-            boxShadow: '0 0 4px 1px #fadb14',
-            border: '1px solid #fadb14',
-          }} />
-          <span>🏖️ Break</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '16px', height: '12px', backgroundColor: '#52c41a', borderRadius: '2px' }} />
-          <span>&lt;175h</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '16px', height: '12px', backgroundColor: '#faad14', borderRadius: '2px' }} />
-          <span>175-200h</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '16px', height: '12px', backgroundColor: '#f5222d', borderRadius: '2px' }} />
-          <span>&gt;200h</span>
-        </div>
       </div>
     </Card>
   );
