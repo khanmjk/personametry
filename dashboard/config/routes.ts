@@ -42,6 +42,13 @@ export default [
     icon: 'team',
     component: './Personas',
   },
+  // Gains & Losses (Comparison)
+  {
+    path: '/gains-losses',
+    name: 'Gains/Losses',
+    icon: 'rise',
+    component: './GainsLosses',
+  },
   // All Time / Historical Overview
   {
     path: '/alltime',

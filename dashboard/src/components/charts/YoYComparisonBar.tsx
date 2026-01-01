@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Bar } from '@ant-design/charts';
+import { Column } from '@ant-design/charts';
 import { Card } from 'antd';
 import type { YearlyComparison } from '@/models/personametry';
 import { PERSONA_SHORT_NAMES } from '@/models/personametry';
@@ -25,12 +25,12 @@ const YoYComparisonBar: React.FC<YoYComparisonBarProps> = ({
   title,
   height = 350,
 }) => {
-  // Transform data for diverging bar chart
+  // Transform data for diverging column chart
   const chartData = data.map((item) => ({
     persona: PERSONA_SHORT_NAMES[item.persona] || item.persona,
     delta: Math.round(item.deltaHours),
     percentChange: item.percentageChange,
-    isPositive: item.deltaHours >= 0,
+    type: item.deltaHours >= 0 ? 'Gain' : 'Loss',
   }));
 
   // Sort by delta (largest positive to largest negative)
@@ -38,40 +38,32 @@ const YoYComparisonBar: React.FC<YoYComparisonBarProps> = ({
 
   const config = {
     data: chartData,
-    xField: 'delta',
-    yField: 'persona',
+    xField: 'persona',
+    yField: 'delta',
+    seriesField: 'type',
     height: height - 50,
-    color: (datum: { isPositive: boolean }) => {
-      return datum.isPositive ? '#52c41a' : '#ff4d4f';
-    },
+    autoFit: true,
+    // 'Gain' (G) comes before 'Loss' (L), so: [Green, Red]
+    color: ['#52c41a', '#ff4d4f'],
     label: {
-      position: 'right' as const,
-      formatter: (datum: { delta: number; percentChange: number }) => {
+      position: 'middle' as const, // Safer position
+      content: (datum: { delta: number; percentChange: number }) => {
         const sign = datum.delta >= 0 ? '+' : '';
-        return `${sign}${datum.delta}h (${sign}${datum.percentChange}%)`;
+        return `${sign}${datum.delta}h`;
       },
       style: {
-        fill: '#666',
-        fontSize: 11,
+        fill: '#fff',
+        fontSize: 10,
       },
     },
     xAxis: {
-      title: { text: 'Hours Change' },
-      grid: {
-        line: {
-          style: {
-            stroke: '#ddd',
-            lineWidth: 1,
-            lineDash: [4, 4],
-          },
-        },
+      label: {
+        autoHide: false,
+        autoRotate: true,
       },
     },
     yAxis: {
-      title: null,
-    },
-    barStyle: {
-      radius: [4, 4, 4, 4],
+      title: { text: 'Hours Change' },
     },
     tooltip: {
       formatter: (datum: { persona: string; delta: number; percentChange: number }) => ({
@@ -79,18 +71,6 @@ const YoYComparisonBar: React.FC<YoYComparisonBarProps> = ({
         value: `${datum.delta >= 0 ? '+' : ''}${datum.delta} hours (${datum.percentChange}%)`,
       }),
     },
-    annotations: [
-      {
-        type: 'line',
-        start: [0, 'min'],
-        end: [0, 'max'],
-        style: {
-          stroke: '#888',
-          lineWidth: 2,
-          lineDash: [0],
-        },
-      },
-    ],
   };
 
   return (
@@ -98,7 +78,7 @@ const YoYComparisonBar: React.FC<YoYComparisonBarProps> = ({
       title={title || `Year-over-Year Change (${previousYear} → ${currentYear})`}
       style={{ height }}
     >
-      <Bar {...config} />
+      <Column {...config} />
     </Card>
   );
 };
