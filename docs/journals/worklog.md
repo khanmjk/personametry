@@ -117,4 +117,17 @@
 
 ---
 
-_Log entries follow format: `HH:MM - Task Title` with bullet points for details_
+### 10:15 - Trends Page Improvements
+
+- **Trends Page Refactor**:
+  - Updated "Year-over-Year Change" chart from delta view to side-by-side grouped bar comparison.
+  - Restyled "Total Hours by Year & Persona" chart to group by Persona (X-axis) instead of Year.
+  - Implemented `YEAR_COLORS` palette for consistent multi-year theming.
+  - Added explicit TypeScript typing to chart callbacks.
+  - **Issue**: Charts reported as single-color (blue). Debugging color callback signature for @ant-design/charts.
+  - **Fix**: Identified `colorField` as mandatory for grouped multi-color charts.
+  - **Refactor**: Updated `YearlyStackedBar` to support `variant="grouped"` and utilized it in Trends page for reusable, robust rendering.
+  - **Documentation**: Updated `agent-coding-contract.md` with new chart guidelines.
+  - **All Time Page**: Refactored "Hours by Year & Persona" chart to use `YearlyStackedBar` (grouped variant), fixing color issues and ensuring consistency with Trends page.
+  - **Verification**: Verified color consistency with User. Confirmed that Chart employs `YEAR_COLORS` (for temporal differentiation) while Table employs `PERSONA_COLORS` (for categorical identification). Design approved.
+  - **Pie Chart Standardization**: Refactored Trends "Work-Life Balance" component to match Dashboard "Time Distribution" UX (Full Pie + Side Legend Table). Updated `agent-coding-contract.md` with Rule 5.4.

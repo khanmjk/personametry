@@ -7,7 +7,8 @@
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
 import { Row, Col, Spin, Alert, Select, Space, Typography, Segmented } from 'antd';
-import { Column, Pie, Line } from '@ant-design/charts';
+import { Column, Pie } from '@ant-design/charts';
+import YearlyStackedBar from '@/components/charts/YearlyStackedBar';
 import type { TimeEntry, DataMetadata } from '@/models/personametry';
 import {
   PERSONA_COLORS,
@@ -78,19 +79,7 @@ const TrendsPage: React.FC = () => {
     { type: 'Sleep', value: Math.round(sleepHours), color: META_WORK_LIFE_COLORS[MetaWorkLife.SLEEP_LIFE] },
   ];
 
-  // Yearly stacked data
-  const yearlyStackedData: { year: string; persona: string; hours: number }[] = [];
-  for (const year of availableYears.slice().reverse()) {
-    const yearData = filterByYear(entries, year);
-    const summaries = groupByPersona(yearData);
-    for (const s of summaries) {
-      yearlyStackedData.push({
-        year: year.toString(),
-        persona: PERSONA_SHORT_NAMES[s.persona] || s.persona,
-        hours: Math.round(s.totalHours),
-      });
-    }
-  }
+
 
   // YoY Diverging bar data
   const yoyBarData = yoyData.map((item) => ({
@@ -118,6 +107,14 @@ const TrendsPage: React.FC = () => {
     );
   }
 
+  // Create color palettes based on data order
+  const yoyPalette = [
+    YEAR_COLORS[comparisonYear - 1] || '#888',
+    YEAR_COLORS[comparisonYear] || '#888'
+  ];
+
+
+
   return (
     <PageContainer
       header={{
@@ -143,113 +140,126 @@ const TrendsPage: React.FC = () => {
             title={<Title level={5} style={{ margin: 0 }}>Work-Life Balance</Title>}
             style={{ ...CARD_STYLE, height: 380 }}
           >
-            <Pie
-              data={workLifeData}
-              angleField="value"
-              colorField="type"
-              radius={0.85}
-              innerRadius={0.6}
-              height={280}
-              color={({ type }) => {
-                const item = workLifeData.find((d) => d.type === type);
-                return item?.color || '#888';
-              }}
-              label={{
-                type: 'outer',
-                content: ({ type, percent }) => `${type}\n${(percent * 100).toFixed(0)}%`,
-                style: { fontSize: 11, fontWeight: 500 },
-              }}
-              legend={{
-                position: 'bottom',
-                itemName: { style: { fontSize: 12 } },
-              }}
-              statistic={{
-                title: { content: comparisonYear.toString(), style: { fontSize: 14 } },
-                content: { content: `${formatHours(totalHours)} hrs`, style: { fontSize: 18, fontWeight: 600 } },
-              }}
-            />
+            <Row gutter={16} align="middle" style={{ height: '100%' }}>
+              <Col span={12}>
+                <Pie
+                  data={workLifeData}
+                  angleField="value"
+                  colorField="type"
+                  radius={0.9}
+                  innerRadius={0} // Full Pie as per Dashboard standard
+                  height={280}
+                  color={({ type }: { type: string }) => {
+                     const item = workLifeData.find(d => d.type === type);
+                     return item?.color || '#888';
+                  }}
+                  label={false}
+                  legend={false}
+                  statistic={false}
+                  interactions={[{ type: 'element-active' }]}
+                />
+              </Col>
+              <Col span={12}>
+                <div style={{ paddingRight: 10 }}>
+                  {workLifeData.map((item) => {
+                    const percentage = totalHours > 0 ? Math.round((item.value / totalHours) * 100) : 0;
+                    return (
+                      <div 
+                        key={item.type} 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          padding: '8px 0',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <Space size={8}>
+                          <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: item.color }} />
+                          <Text style={{ fontSize: 13 }}>{item.type}</Text>
+                        </Space>
+                        <Space size={12}>
+                          <Text strong style={{ fontSize: 13, minWidth: 40, textAlign: 'right' }}>{percentage}%</Text>
+                          <Text type="secondary" style={{ fontSize: 12, minWidth: 50, textAlign: 'right' }}>{formatHours(item.value)}h</Text>
+                        </Space>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Col>
+            </Row>
           </ProCard>
         </Col>
 
         <Col xs={24} lg={16}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Year-over-Year Change ({comparisonYear - 1} → {comparisonYear})</Title>}
+            title={<Title level={5} style={{ margin: 0 }}>Year-over-Year Comparison ({comparisonYear - 1} vs {comparisonYear})</Title>}
             style={{ ...CARD_STYLE, height: 380 }}
           >
             <Column
-              data={yoyBarData}
+              data={[
+                ...groupByPersona(filterByYear(entries, comparisonYear - 1)).map(p => ({
+                  persona: PERSONA_SHORT_NAMES[p.persona] || p.persona,
+                  year: (comparisonYear - 1).toString(),
+                  hours: Math.round(p.totalHours)
+                })),
+                ...groupByPersona(filterByYear(entries, comparisonYear)).map(p => ({
+                  persona: PERSONA_SHORT_NAMES[p.persona] || p.persona,
+                  year: comparisonYear.toString(),
+                  hours: Math.round(p.totalHours)
+                }))
+              ].sort((a, b) => {
+                 // Sort by year first (to ensure legend/series order is 2021, 2022)
+                 if (a.year !== b.year) return parseInt(a.year) - parseInt(b.year);
+                 // Then sort by persona
+                 const pA = Object.keys(PERSONA_SHORT_NAMES).find(key => PERSONA_SHORT_NAMES[key] === a.persona) || a.persona;
+                 const pB = Object.keys(PERSONA_SHORT_NAMES).find(key => PERSONA_SHORT_NAMES[key] === b.persona) || b.persona;
+                 return pA.localeCompare(pB);
+              })}
               xField="persona"
-              yField="delta"
+              yField="hours"
+              seriesField="year"
+              colorField="year"
+              isGroup={true}
               height={290}
-              color={({ isPositive }) => (isPositive ? STATUS_COLORS.success : STATUS_COLORS.error)}
-              columnWidthRatio={0.5}
+              color={yoyPalette}
+              columnWidthRatio={0.6}
+              marginRatio={0.1}
               label={{
                 position: 'top',
-                content: ({ delta }) => `${delta >= 0 ? '+' : ''}${delta}`,
-                style: ({ isPositive }) => ({
-                  fill: isPositive ? STATUS_COLORS.success : STATUS_COLORS.error,
-                  fontSize: 11,
-                  fontWeight: 600,
-                }),
+                content: ({ hours }: { hours: number }) => hours > 100 ? `${(hours / 1000).toFixed(1)}k` : '',
+                style: {
+                    fill: '#666',
+                    fontSize: 10,
+                    fontWeight: 600
+                },
               }}
-              xAxis={{ label: { style: { fontSize: 10 } } }}
+              xAxis={{ 
+                  label: { style: { fontSize: 11 } },
+                  title: { text: null }
+              }}
               yAxis={{
-                title: { text: 'Hours Change', style: { fontSize: 11 } },
+                title: { text: 'Total Hours', style: { fontSize: 11 } },
                 grid: { line: { style: { stroke: '#f0f0f0' } } },
               }}
-              annotations={[
-                {
-                  type: 'line',
-                  start: ['min', 0],
-                  end: ['max', 0],
-                  style: { stroke: '#888', lineWidth: 1, lineDash: [4, 4] },
-                },
-              ]}
+              legend={{
+                  position: 'top-left'
+              }}
             />
           </ProCard>
         </Col>
       </Row>
 
-      {/* Row 2: Yearly Stacked Bar */}
+      {/* Row 2: Total Hours by Year & Persona */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
         <Col xs={24}>
-          <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Total Hours by Year & Persona</Title>}
-            style={{ ...CARD_STYLE, height: 420 }}
-          >
-            <Column
-              data={yearlyStackedData}
-              xField="year"
-              yField="hours"
-              seriesField="persona"
-              isStack
-              height={340}
-              color={({ persona }) => {
-                const fullName = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === persona)?.[0];
-                return fullName ? PERSONA_COLORS[fullName] : '#888';
-              }}
-              label={{
-                position: 'middle',
-                content: ({ hours }) => (hours > 400 ? `${(hours / 1000).toFixed(1)}k` : ''),
-                style: { fill: '#fff', fontSize: 10, fontWeight: 500 },
-              }}
-              legend={{
-                position: 'right',
-                itemName: { style: { fontSize: 12, fontWeight: 500 } },
-              }}
-              xAxis={{
-                title: { text: 'Year', style: { fontSize: 12 } },
-                label: { style: { fontSize: 12 } },
-              }}
-              yAxis={{
-                title: { text: 'Total Hours', style: { fontSize: 12 } },
-                grid: { line: { style: { stroke: '#f0f0f0' } } },
-              }}
-              tooltip={{
-                formatter: (datum) => ({ name: datum.persona, value: `${datum.hours.toLocaleString()} hrs` }),
-              }}
+           {/* Reusing the robust component for consistency */}
+           <YearlyStackedBar 
+              entries={entries} 
+              title="Total Hours by Year & Persona" 
+              height={420} 
+              variant="grouped" 
             />
-          </ProCard>
         </Col>
       </Row>
     </PageContainer>

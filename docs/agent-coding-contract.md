@@ -156,6 +156,25 @@ const CARD_STYLE = {
   borderRadius: 8,
   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
 };
+
+### 5.3 Multi-Colored Grouped Bar Charts
+
+**CRITICAL RULE**: When creating **grouped** bar/column charts (`isGroup: true`):
+1. You MUST set `colorField` matches the grouping field (e.g. `seriesField="year"` → `colorField="year"`).
+2. Without `colorField`, the library treats the series as a single continuous group and defaults to one color (blue).
+3. Do NOT rely on callbacks for colors in grouped charts; use an explicit array of hex strings if possible.
+
+### 5.4 Pie Chart Standardization
+
+**Visual Standard**:
+1.  **Shape**: Use **Full Pie Charts** (`innerRadius: 0`). Avoid Ring/Donut charts unless explicitly requested for "Gauge" style metrics.
+2.  **Legend**: Do **NOT** use the default chart legend.
+    - Use a **Split Layout** (`Row > Col 12 + Col 12`).
+    - **Left Col**: Clean Pie Chart (no labels, no legend).
+    - **Right Col**: Custom Legend Table showing `Color | Name | % | Value`.
+3.  **Consistency**: This ensures all Pie visualizations provide detailed data (Hours + %) at a glance without hovering.
+
+
 ```
 
 ---

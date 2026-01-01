@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
 import { Row, Col, Spin, Alert, Statistic, Typography, Divider, Table, Space } from 'antd';
 import { Column, Line } from '@ant-design/charts';
+import YearlyStackedBar from '@/components/charts/YearlyStackedBar';
 import {
   ClockCircleOutlined,
   CalendarOutlined,
@@ -71,19 +72,7 @@ const AllTimePage: React.FC = () => {
   // Persona breakdown across all years
   const personaSummaries = groupByPersona(entriesExcludingSleep);
 
-  // Yearly stacked data for chart
-  const yearlyStackedData: { year: string; persona: string; hours: number }[] = [];
-  for (const year of availableYears.slice().reverse()) {
-    const yearData = filterByYear(entries, year).filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
-    const summaries = groupByPersona(yearData);
-    for (const s of summaries) {
-      yearlyStackedData.push({
-        year: year.toString(),
-        persona: PERSONA_SHORT_NAMES[s.persona] || s.persona,
-        hours: Math.round(s.totalHours),
-      });
-    }
-  }
+
 
   // Yearly totals for trend line
   const yearlyTotals = availableYears.map(year => {
@@ -265,37 +254,12 @@ const AllTimePage: React.FC = () => {
       {/* Stacked Bar + Table */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
         <Col xs={24} lg={14}>
-          <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Hours by Year & Persona</Title>}
-            style={{ ...CARD_STYLE, height: 420 }}
-          >
-            <Column
-              data={yearlyStackedData}
-              xField="year"
-              yField="hours"
-              seriesField="persona"
-              isStack
-              height={340}
-              color={({ persona }: { persona: string }) => {
-                const fullName = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === persona)?.[0];
-                return fullName ? PERSONA_COLORS[fullName] : '#888';
-              }}
-              label={{
-                position: 'middle',
-                content: ({ hours }: { hours: number }) => (hours > 300 ? `${(hours / 1000).toFixed(1)}k` : ''),
-                style: { fill: '#fff', fontSize: 10, fontWeight: 500 },
-              }}
-              legend={{
-                position: 'right',
-                itemName: { style: { fontSize: 12, fontWeight: 500 } },
-              }}
-              xAxis={{ label: { style: { fontSize: 11 } } }}
-              yAxis={{
-                title: { text: 'Hours', style: { fontSize: 12 } },
-                grid: { line: { style: { stroke: '#f0f0f0' } } },
-              }}
-            />
-          </ProCard>
+          <YearlyStackedBar
+            entries={entriesExcludingSleep}
+            title="Hours by Year & Persona"
+            height={420}
+            variant="grouped"
+          />
         </Col>
         <Col xs={24} lg={10}>
           <ProCard
