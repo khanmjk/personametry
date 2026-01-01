@@ -135,14 +135,14 @@ const IndividualPage: React.FC = () => {
     data: analysis.activityBreakdown,
     angleField: 'hours',
     colorField: 'category',
-    color: (datum: { category: string }) => {
+    color: (category: string) => {
       const colorMap: Record<string, string> = {
         'Health & Fitness': '#52c41a',
         'Learning': '#1890ff',
         'Hobbies & Creative': '#722ed1',
         'Spiritual': '#faad14',
       };
-      return colorMap[datum.category] || '#999';
+      return colorMap[category] || '#999';
     },
     radius: 0.85,
     innerRadius: 0.55,
@@ -156,6 +156,11 @@ const IndividualPage: React.FC = () => {
       },
     },
     interactions: [{ type: 'element-active' }],
+    tooltip: {
+      formatter: (datum: any) => {
+        return { name: datum.category, value: `${formatHours(datum.hours)} hrs (${datum.percentage}%)` };
+      },
+    },
   };
 
   // Line chart config for monthly trend
@@ -331,14 +336,14 @@ const IndividualPage: React.FC = () => {
                   data={analysis.activityBreakdown}
                   angleField="hours"
                   colorField="category"
-                  color={(datum: { category: string }) => {
+                  color={(category: string) => {
                     const colorMap: Record<string, string> = {
                       'Health & Fitness': '#52c41a',
                       'Learning': '#1890ff',
                       'Hobbies & Creative': '#722ed1',
                       'Spiritual': '#faad14',
                     };
-                    return colorMap[datum.category] || '#999';
+                    return colorMap[category] || '#999';
                   }}
                   radius={1}
                   innerRadius={0}
@@ -346,6 +351,11 @@ const IndividualPage: React.FC = () => {
                   legend={false}
                   height={280}
                   interactions={[{ type: 'element-active' }]}
+                  tooltip={{
+                    formatter: (datum: any) => {
+                      return { name: datum.category, value: `${formatHours(datum.hours)} hrs (${datum.percentage}%)` };
+                    },
+                  }}
                 />
               </Col>
               {/* Right: Legend Table */}

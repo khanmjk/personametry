@@ -222,7 +222,7 @@ const PersonametryDashboard: React.FC = () => {
                   radius={0.9}
                   innerRadius={0}
                   height={300}
-                  color={({ type }: { type: string }) => {
+                  color={(type: string) => {
                     const persona = Object.entries(PERSONA_SHORT_NAMES).find(([, short]) => short === type)?.[0];
                     return persona ? PERSONA_COLORS[persona] : '#888';
                   }}
@@ -230,6 +230,11 @@ const PersonametryDashboard: React.FC = () => {
                   legend={false}
                   statistic={false}
                   interactions={[{ type: 'element-active' }]}
+                  tooltip={{
+                    formatter: (datum: any) => {
+                      return { name: datum.type, value: `${formatHours(datum.value)} hrs (${datum.percentage}%)` };
+                    },
+                  }}
                 />
               </Col>
               {/* Custom Legend Table */}
