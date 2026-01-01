@@ -12,8 +12,13 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 // Normal work: 45h/week = ~195h/month
 // With overtime: 55h/week = ~238h/month max
 // Green: <175h (healthy), Amber: 175-200h (approaching limit), Red: >200h (excessive)
+// Special: <12h = "ON A BREAK" (highlighted with glow)
+const BREAK_THRESHOLD = 12;
+
 const getColor = (hours: number): string => {
-  if (hours < 175) {
+  if (hours < BREAK_THRESHOLD) {
+    return '#13c2c2'; // Teal - ON A BREAK (will get yellow glow)
+  } else if (hours < 175) {
     return '#52c41a'; // Green - healthy work-life balance
   } else if (hours <= 200) {
     return '#faad14'; // Amber - approaching legal limit
@@ -80,19 +85,28 @@ const WorkHeatmap: React.FC<WorkHeatmapProps> = ({ data, height = 530 }) => {
             {years.map(year => {
               const hours = dataMap.get(`${year}-${monthIndex + 1}`);
               const hasData = hours !== undefined;
+              const isBreak = hasData && hours < BREAK_THRESHOLD;
               const bgColor = hasData ? getColor(hours) : '#f5f5f5';
               const textColor = hasData ? '#fff' : '#ccc';
               
               return (
                 <Tooltip 
                   key={`${year}-${monthIndex}`} 
-                  title={hasData ? `${monthName} ${year}: ${Math.round(hours)}h` : 'No data'}
+                  title={hasData 
+                    ? `${monthName} ${year}: ${Math.round(hours)}h${isBreak ? ' 🏖️ ON A BREAK' : ''}` 
+                    : 'No data'
+                  }
                 >
                   <div style={{ 
                     ...cellStyle, 
                     backgroundColor: bgColor,
                     color: textColor,
                     cursor: 'pointer',
+                    ...(isBreak && {
+                      boxShadow: '0 0 8px 2px #fadb14, inset 0 0 4px rgba(255,255,255,0.3)',
+                      border: '2px solid #fadb14',
+                      fontWeight: 700,
+                    }),
                   }}>
                     {hasData ? Math.round(hours) : '-'}
                   </div>
@@ -113,6 +127,17 @@ const WorkHeatmap: React.FC<WorkHeatmapProps> = ({ data, height = 530 }) => {
         color: '#666',
         gap: '12px'
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ 
+            width: '16px', 
+            height: '12px', 
+            backgroundColor: '#13c2c2', 
+            borderRadius: '2px',
+            boxShadow: '0 0 4px 1px #fadb14',
+            border: '1px solid #fadb14',
+          }} />
+          <span>🏖️ Break</span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <div style={{ width: '16px', height: '12px', backgroundColor: '#52c41a', borderRadius: '2px' }} />
           <span>&lt;175h</span>
