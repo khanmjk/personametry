@@ -154,6 +154,15 @@ const TrendsPage: React.FC = () => {
                   legend={false}
                   statistic={false}
                   interactions={[{ type: 'element-active' }]}
+                  tooltip={{
+                    title: (datum: any) => datum.type,
+                    items: [
+                      (datum: any) => ({
+                        name: datum.type,
+                        value: `${formatHours(datum.value)} hrs`,
+                      }),
+                    ],
+                  }}
                 />
               </Col>
               <Col span={12}>

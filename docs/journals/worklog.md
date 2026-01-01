@@ -362,3 +362,26 @@
   - Trends Work-Life Balance: ✅ MATCH
   - Individual Activity Distribution: ✅ MATCH
 - **Key Learning**: G2Plot v5 deprecates the direct `color` prop in favor of `scale.color.range` for ordinal color mapping.
+
+### 17:50 - Pie Chart Tooltip Fix ✅
+
+- **Issue**: Pie chart tooltips showed blank content (just a colored dot, no text).
+- **Root Cause**: Some pie charts (Trends, WorkLifePie) had NO tooltip config. Others (Personametry, Individual) used the deprecated G2 v4 `formatter` API.
+- **G2 v5 Solution**:
+  - **Before (deprecated)**:
+    ```tsx
+    tooltip={{ formatter: (datum) => ({ name: datum.type, value: 'X hrs' }) }}
+    ```
+  - **After (G2 v5 compatible)**:
+    ```tsx
+    tooltip={{
+      title: (datum) => datum.type,
+      items: [(datum) => ({ name: datum.type, value: 'X hrs' })]
+    }}
+    ```
+- **Files Fixed**:
+  - `Trends/index.tsx` - Added tooltip config (was missing)
+  - `WorkLifePie.tsx` - Added tooltip config (was missing)
+  - `Personametry/index.tsx` - Migrated to G2 v5 format
+  - `Individual/index.tsx` - Migrated to G2 v5 format
+- **Verification**: All tooltips now show "Persona: X hrs" format correctly.

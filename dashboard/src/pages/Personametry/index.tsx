@@ -232,9 +232,13 @@ const PersonametryDashboard: React.FC = () => {
                   statistic={false}
                   interactions={[{ type: 'element-active' }]}
                   tooltip={{
-                    formatter: (datum: any) => {
-                      return { name: datum.type, value: `${formatHours(datum.value)} hrs (${datum.percentage}%)` };
-                    },
+                    title: (datum: any) => datum.type,
+                    items: [
+                      (datum: any) => ({
+                        name: datum.type,
+                        value: `${formatHours(datum.value)} hrs (${datum.percentage}%)`,
+                      }),
+                    ],
                   }}
                 />
               </Col>

@@ -344,9 +344,13 @@ const IndividualPage: React.FC = () => {
                   height={280}
                   interactions={[{ type: 'element-active' }]}
                   tooltip={{
-                    formatter: (datum: any) => {
-                      return { name: datum.category, value: `${formatHours(datum.hours)} hrs (${datum.percentage}%)` };
-                    },
+                    title: (datum: any) => datum.category,
+                    items: [
+                      (datum: any) => ({
+                        name: datum.category,
+                        value: `${formatHours(datum.hours)} hrs (${datum.percentage}%)`,
+                      }),
+                    ],
                   }}
                 />
               </Col>

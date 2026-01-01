@@ -87,6 +87,15 @@ const WorkLifePie: React.FC<WorkLifePieProps> = ({
       },
     },
     interactions: [{ type: 'element-active' }],
+    tooltip: {
+      title: (datum: { type: string }) => datum.type,
+      items: [
+        (datum: { type: string; value: number }) => ({
+          name: datum.type,
+          value: `${formatHours(datum.value)} hrs`,
+        }),
+      ],
+    },
   };
 
   return (
