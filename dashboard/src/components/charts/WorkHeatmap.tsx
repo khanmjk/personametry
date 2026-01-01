@@ -7,60 +7,73 @@ interface WorkHeatmapProps {
   height?: number;
 }
 
-const WorkHeatmap: React.FC<WorkHeatmapProps> = ({ data, height = 300 }) => {
-  // Transform for Heatmap: x=Month, y=Year, color=Hours
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const WorkHeatmap: React.FC<WorkHeatmapProps> = ({ data, height = 400 }) => {
+  // Transform for Heatmap: x=Year, y=Month (matching reference)
   const chartData = data.map((d) => ({
-    month: `${d.month}`,
     year: `${d.year}`,
+    month: MONTH_NAMES[d.month - 1] || `${d.month}`,
     hours: Math.round(d.hours),
   }));
 
+  // Get unique years for x-axis ordering
+  const years = [...new Set(data.map(d => d.year))].sort((a, b) => a - b).map(String);
+
   const config = {
     data: chartData,
-    xField: 'month',
-    yField: 'year',
+    xField: 'year',      // Years on X-axis (columns)
+    yField: 'month',     // Months on Y-axis (rows)
     colorField: 'hours',
-    // shape: 'square', // Removing to allow filling the cell
-    color: ['#fff7e6', '#ffe7ba', '#ffc069', '#fa8c16', '#d46b08'], // P3 Orange Scale
+    // Blue (low) to Red (high) diverging scale matching reference
+    color: ['#3182bd', '#6baed6', '#9ecae1', '#c6dbef', '#eff3ff', '#fee5d9', '#fcbba1', '#fc9272', '#fb6a4a', '#cb181d'],
+    reflect: 'y', // Flip Y so Jan is at top
     label: {
-      offset: -2,
       style: {
-        fill: '#555',
-        shadowBlur: 2,
-        shadowColor: 'rgba(255, 255, 255, .65)',
+        fill: '#fff',
+        fontSize: 11,
+        fontWeight: 500,
+        textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
       },
-    },
-    hover: {
-        opacity: 0.8
-    },
-    coordinate: {
-        type: 'cartesian' as const, 
-        reflect: 'y', // Ensure years go top-down or bottom-up as preferred? Standard is usually bottom-up for charts, but calendar often top-down. Let's try standard.
+      formatter: (datum: any) => `${datum.hours}`,
     },
     meta: {
-        month: {
-            type: 'cat',
-            values: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
-        },
-        year: {
-            type: 'cat',
-        }
+      year: {
+        type: 'cat',
+        values: years,
+      },
+      month: {
+        type: 'cat',
+        values: [...MONTH_NAMES].reverse(), // Reverse so Jan is at top
+      },
+    },
+    xAxis: {
+      title: { text: 'Year' },
+      tickLine: null,
+    },
+    yAxis: {
+      title: { text: 'Month' },
+      tickLine: null,
     },
     heatmapStyle: {
-        stroke: '#fff',
-        lineWidth: 1,
+      stroke: '#fff',
+      lineWidth: 2,
     },
     tooltip: {
-        showMarkers: false,
-        formatter: (datum: any) => {
-            return { name: 'Hours', value: datum.hours + 'h' };
-        }
+      showMarkers: false,
+      formatter: (datum: any) => {
+        return { name: `${datum.month} ${datum.year}`, value: `${datum.hours}h` };
+      },
     },
-    height: height - 50,
+    legend: {
+      position: 'right' as const,
+    },
+    height: height - 60,
+    autoFit: true,
   };
 
   return (
-    <Card title="Work Intensity Heatmap (Monthly Hours)" style={{ height }}>
+    <Card title="Work Hours Heatmap (2018-2024)" style={{ height }}>
       <Heatmap {...config} />
     </Card>
   );
