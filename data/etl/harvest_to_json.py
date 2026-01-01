@@ -22,7 +22,7 @@ from pathlib import Path
 import re
 
 # Configuration
-INPUT_FILE = Path(__file__).parent.parent.parent / "seedfiles" / "harvest_time_report_from2015-07-06to2022-07-31.xlsx"
+INPUT_FILE = Path(__file__).parent.parent.parent / "seedfiles" / "harvest_time_report.xlsx"
 OUTPUT_FILE = Path(__file__).parent.parent / "processed" / "timeentries_harvest.json"
 
 
