@@ -385,3 +385,23 @@
   - `Personametry/index.tsx` - Migrated to G2 v5 format
   - `Individual/index.tsx` - Migrated to G2 v5 format
 - **Verification**: All tooltips now show "Persona: X hrs" format correctly.
+
+### 18:00 - Dashboard Sparse Data Handling ✅
+
+- **Issue**: Start of new year (2026) with only ~2 hours logged caused pie chart to show incorrect proportions.
+- **Root Cause**: `Math.round(0.4)` → 0, causing small personas to contribute 0 to pie chart.
+- **Fix**:
+  - Removed `Math.round()` from pie chart values - now uses raw decimal values
+  - Added "Limited data" info banner when totalHours < 10 hrs
+- **Commit**: `05338b3`
+
+### 18:15 - Work Heatmap "ON A BREAK" Highlighting ✅
+
+- **Feature Request**: Highlight months where user was "ON A BREAK" (< 12h work).
+- **Implementation**:
+  - Months with < 12h: Green fill + yellow glow border
+  - Months with NO data: Also treated as breaks (green + glow)
+  - Beach emoji (🏖️) in tooltip for break months
+  - Legend moved from bottom-right to top-right (Card extra)
+- **Visual Distinction**: Yellow glow (`boxShadow: 0 0 8px 2px #fadb14`) makes break months pop
+- **Commits**: `737299f` (initial), `c935ce7` (refined to green fill + legend reposition)
