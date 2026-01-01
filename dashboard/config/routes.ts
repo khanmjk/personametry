@@ -46,7 +46,7 @@ export default [
   {
     path: '/work',
     name: 'Work',
-    icon: 'briefcase',
+    icon: 'schedule',
     component: './Work',
   },
   {

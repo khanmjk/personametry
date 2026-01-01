@@ -14,27 +14,33 @@ import { FireOutlined, ClockCircleOutlined, ThunderboltOutlined } from '@ant-des
 
 const WorkPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
-  const [analysis, setAnalysis] = useState<WorkPatternAnalysis | null>(null);
+  const [fullAnalysis, setFullAnalysis] = useState<WorkPatternAnalysis | null>(null);
+  const [yearAnalysis, setYearAnalysis] = useState<WorkPatternAnalysis | null>(null);
   const [years, setYears] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const [allEntries, setAllEntries] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         const entries = await getAllEntries();
+        setAllEntries(entries);
+        
         const availableYears = getAvailableYears(entries);
         setYears(availableYears);
+        if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+             setSelectedYear(availableYears[0]);
+        }
         
-        // Calculate patterns for selected year
-        // Note: Heatmap usually wants ALL time, but let's pass selectedYear for filtering late days/streaks
-        // Actually, let's calculate global patterns for the heatmap and year-specific for others if needed.
-        // For now, let's pass 'undefined' to get ALL years for the heatmap context, 
-        // or filter locally. The service method filters by year if provided.
-        // Let's get ALL data first to support the multi-year heatmap.
+        // 1. Full History for Heatmap
+        const history = calculateWorkPatterns(entries); 
+        setFullAnalysis(history);
         
-        const fullAnalysis = calculateWorkPatterns(entries); 
-        setAnalysis(fullAnalysis);
+        // 2. Initial Year Analysis
+        const currentYear = availableYears.includes(selectedYear) ? selectedYear : availableYears[0];
+        const yearly = calculateWorkPatterns(entries, currentYear);
+        setYearAnalysis(yearly);
         
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -45,14 +51,27 @@ const WorkPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Recalculate if we want year-specific filtering on client side, 
-  // currently we fetched GLOBAL analysis. 
-  // Let's filter specific metrics for the "current year view" if needed.
-  
-  if (!analysis) return null;
+  useEffect(() => {
+      if (allEntries.length > 0) {
+          const yearly = calculateWorkPatterns(allEntries, selectedYear);
+          setYearAnalysis(yearly);
+      }
+  }, [selectedYear, allEntries]);
+
+  if (!fullAnalysis || !yearAnalysis) return null;
 
   return (
-    <PageContainer>
+    <PageContainer
+        extra={[
+            <Select 
+                key="year-select"
+                value={selectedYear} 
+                onChange={setSelectedYear} 
+                style={{ width: 120 }}
+                options={years.map(y => ({ label: y, value: y }))}
+            />
+        ]}
+    >
        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
            <Alert 
@@ -64,13 +83,13 @@ const WorkPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* KPI Row */}
+      {/* KPI Row (Year Specific) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="Total Late Days (> 7 PM)"
-              value={analysis.stats.totalLateDays}
+              title={`Late Days in ${selectedYear} (> 7 PM)`}
+              value={yearAnalysis.stats.totalLateDays}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#cf1322' }}
             />
@@ -79,8 +98,8 @@ const WorkPage: React.FC = () => {
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="Max Work Streak (Days)"
-              value={analysis.stats.maxStreakLength}
+              title={`Max Streak in ${selectedYear} (Days)`}
+              value={yearAnalysis.stats.maxStreakLength}
               prefix={<FireOutlined />}
               valueStyle={{ color: '#d48806' }}
             />
@@ -90,7 +109,7 @@ const WorkPage: React.FC = () => {
           <Card>
             <Statistic
               title="Avg Daily Hours"
-              value={analysis.stats.avgDailyHours}
+              value={yearAnalysis.stats.avgDailyHours}
               precision={1}
               prefix={<ThunderboltOutlined />}
               suffix="h"
@@ -99,24 +118,24 @@ const WorkPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Main Heatmap Row */}
+      {/* Main Heatmap Row (History) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
-          <WorkHeatmap data={analysis.workIntensityHeatmap} height={350} />
+          <WorkHeatmap data={fullAnalysis.workIntensityHeatmap} height={350} />
         </Col>
       </Row>
 
-      {/* Detailed Analysis Row */}
+      {/* Detailed Analysis Row (Year Specific) */}
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
-          <LateNightChart data={analysis.lateDayFrequency.byDayOfWeek} height={350} />
+          <LateNightChart data={yearAnalysis.lateDayFrequency.byDayOfWeek} height={350} />
         </Col>
         <Col xs={24} md={12}>
-          {analysis && (
+          {yearAnalysis && (
             <StreakHistogram 
               data={[
-                ...analysis.workloadStreaks.highWorkload.map(s => ({ value: s.length, type: 'High Workload (>10h)' })),
-                ...analysis.workloadStreaks.lateEnd.map(s => ({ value: s.length, type: 'Late End (>9pm)' }))
+                ...yearAnalysis.workloadStreaks.highWorkload.map(s => ({ value: s.length, type: 'High Workload (>10h)' })),
+                ...yearAnalysis.workloadStreaks.lateEnd.map(s => ({ value: s.length, type: 'Late End (>9pm)' }))
               ]} 
               height={350} 
             />

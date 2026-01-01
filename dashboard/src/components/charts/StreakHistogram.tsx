@@ -13,6 +13,7 @@ const StreakHistogram: React.FC<StreakHistogramProps> = ({ data, height = 300 })
     binField: 'value',
     binWidth: 1, // Bucket by 1 day
     stackField: 'type',
+    color: ['#d46b08', '#ffc069'], // Dark Orange for High Workload, Light for Late End
     height: height - 50,
     autoFit: true,
     tooltip: {
