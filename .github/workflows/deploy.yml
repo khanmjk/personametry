@@ -48,8 +48,17 @@ jobs:
         run: |
           pip install -r data/etl/requirements.txt
 
+      - name: Check for ETL changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            etl:
+              - 'seedfiles/harvest_time_report.xlsx'
+              - 'data/etl/**'
+
       - name: Run ETL
-        if: github.event_name != 'workflow_run'
+        if: steps.changes.outputs.etl == 'true'
         run: |
           cd data/etl
           python harvest_to_json.py
