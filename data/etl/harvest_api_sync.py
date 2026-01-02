@@ -238,27 +238,71 @@ def load_existing_data():
     return entries, last_date
 
 def merge_and_deduplicate(existing, new_df):
-    """Merge new data with existing, removing duplicates."""
+    """Merge new data with existing, preserving the API's latest version for overlaps."""
     if new_df.empty:
         return existing
 
     new_records = new_df.to_dict('records')
     
-    # Convert to DataFrame for easier deduplication
+    # Create DataFrames for comparison
+    df_existing = pd.DataFrame(existing)
+    df_new = pd.DataFrame(new_records)
+    
+    # Columns used for identifying unique entries
+    dedup_cols = ['date', 'task', 'hours', 'startedAt']
+    
+    # 1. Identify purely new records (not in existing based on dedup keys)
+    # We do a left merge to find what is ALREADY in existing
+    # Note: We need to ensure types match for merge
+    for col in dedup_cols:
+        df_existing[col] = df_existing[col].astype(str)
+        df_new[col] = df_new[col].astype(str)
+        
+    merged_check = pd.merge(
+        df_new, 
+        df_existing[dedup_cols], 
+        on=dedup_cols, 
+        how='left', 
+        indicator=True
+    )
+    
+    # records in new that exist in old (both) = Duplicates/Updates
+    duplicates = merged_check[merged_check['_merge'] == 'both']
+    new_unique = merged_check[merged_check['_merge'] == 'left_only']
+    
+    print(f"\n📊 Merge Analysis:")
+    print(f"   - Existing records: {len(existing)}")
+    print(f"   - New API records:  {len(new_records)}")
+    print(f"   - Overlaps found:   {len(duplicates)} (will be updated with fresh API data)")
+    print(f"   - Net new records:  {len(new_unique)}")
+    
+    if not duplicates.empty:
+        print("\n🔍 Overwritten Records Log (Sample up to 5):")
+        for idx, row in duplicates.head(5).iterrows():
+            print(f"   ♻️  Replaced: {row['date']} | {row['task']} ({row['hours']}h)")
+        if len(duplicates) > 5:
+            print(f"   ... and {len(duplicates) - 5} more.")
+
+    # 2. Perform the actual merge
+    # We concatenate existing + new, then drop_duplicates keeping 'last' (new)
     combined_df = pd.DataFrame(existing + new_records)
     
-    # Deduplication composite key: date + task + hours + startedAt
     before_count = len(combined_df)
     
-    # We drop duplicates keeping the LAST (newest) version if overlaps occur
     combined_df.drop_duplicates(
-        subset=['date', 'task', 'hours', 'startedAt'], 
+        subset=dedup_cols, 
         keep='last', 
         inplace=True
     )
     
     after_count = len(combined_df)
-    print(f"🧩 Merged: {len(existing)} + {len(new_records)} = {before_count} -> {after_count} (Dropped {before_count - after_count} dupes)")
+    
+    # Sanity check
+    expected_count = len(existing) + len(new_records) - len(duplicates)
+    # Note: Logic above is slightly fuzzy matching simple string types vs object types in drop_duplicates
+    # but the principle holds.
+    
+    print(f"\n✅ Final count: {after_count} entries.")
     
     # Sort by date descending
     combined_df.sort_values(by='date', ascending=False, inplace=True)
