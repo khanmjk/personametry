@@ -349,9 +349,16 @@ def main():
         # 1. Load existing state
         existing_entries, last_sync_date = load_existing_data()
         
-        # 2. Fetch new data (incremental)
-        # Use last_sync_date directly to ensure overlap/update of partial days
-        new_raw_entries = fetch_time_entries(last_sync_date)
+        # 2. Fetch new data (incremental with safety lookback)
+        # We look back 30 days to ensure we catch any retroactive updates/late entries
+        # Deduplication logic will handle the overlaps safely
+        last_date_obj = datetime.strptime(last_sync_date, "%Y-%m-%d")
+        lookback_date = (last_date_obj - timedelta(days=30)).strftime("%Y-%m-%d")
+        
+        print(f"🗓️  Last sync date: {last_sync_date}")
+        print(f"🔙 Looking back 30 days to: {lookback_date} (to catch retroactive updates)")
+        
+        new_raw_entries = fetch_time_entries(lookback_date)
         
         if not new_raw_entries:
             print("✨ No new data found. Sync complete.")
