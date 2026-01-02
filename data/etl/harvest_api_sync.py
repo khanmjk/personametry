@@ -350,13 +350,14 @@ def main():
         existing_entries, last_sync_date = load_existing_data()
         
         # 2. Fetch new data (incremental with safety lookback)
-        # We look back 30 days to ensure we catch any retroactive updates/late entries
-        # Deduplication logic will handle the overlaps safely
+        # We look back 7 days to cover "forgot to log last week" scenarios.
+        # Calculation: ~10 entries/day * 7 days = ~70 entries = 1 API page.
+        # Rate Limit: 100 reqs/15s. This uses ~1% of quota. Very safe.
         last_date_obj = datetime.strptime(last_sync_date, "%Y-%m-%d")
-        lookback_date = (last_date_obj - timedelta(days=30)).strftime("%Y-%m-%d")
+        lookback_date = (last_date_obj - timedelta(days=7)).strftime("%Y-%m-%d")
         
         print(f"🗓️  Last sync date: {last_sync_date}")
-        print(f"🔙 Looking back 30 days to: {lookback_date} (to catch retroactive updates)")
+        print(f"🔙 Looking back 7 days to: {lookback_date} (Safe overlap window)")
         
         new_raw_entries = fetch_time_entries(lookback_date)
         
