@@ -3,12 +3,13 @@
  * -----------------
  * Comparative view of time reallocation across personas (Year-over-Year).
  * Visualized as a diverging waterfall-like chart (Blue = Gain, Red = Loss).
+ * NOTE: This page requires a specific year - All Time shows info message.
  */
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Spin, Alert, Select, Table, Space, Tag, Typography } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { Row, Col, Spin, Alert, Table, Space, Tag, Typography, Result } from 'antd';
+import { ArrowUpOutlined, ArrowDownOutlined, InfoCircleOutlined, GlobalOutlined } from '@ant-design/icons';
 import YoYComparisonBar from '@/components/charts/YoYComparisonBar';
 import { 
   type TimeEntry, 
@@ -16,11 +17,10 @@ import {
   PERSONA_SHORT_NAMES,
   type YearlyComparison 
 } from '@/models/personametry';
+import { useYear } from '@/contexts/YearContext';
 import { 
   loadTimeEntries, 
   getAvailableYears, 
-  filterByYear, 
-  groupByPersona, 
   calculateYoYComparison,
   getDataSource,
   formatHours,
@@ -32,8 +32,9 @@ const GainsLossesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
+
+  // Use global year context
+  const { selectedYear, setAvailableYears, isAllTime } = useYear();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,8 +44,6 @@ const GainsLossesPage: React.FC = () => {
         setEntries(data.entries);
         const years = getAvailableYears(data.entries);
         setAvailableYears(years);
-        // Default to latest year
-        setSelectedYear(years[0] || new Date().getFullYear());
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -52,11 +51,38 @@ const GainsLossesPage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [setAvailableYears]);
 
-  // Calculate Comparison
-  const currentYear = selectedYear;
-  const previousYear = selectedYear - 1;
+  // If All Time mode, show info message
+  if (!loading && !error && isAllTime) {
+    return (
+      <PageContainer
+        header={{
+          title: (
+            <span style={{ fontSize: 24, fontWeight: 600 }}>
+              Gains & Losses
+              <Tag color="#0D7377" icon={<GlobalOutlined />} style={{ marginLeft: 12 }}>All Time</Tag>
+            </span>
+          ),
+        }}
+      >
+        <Result
+          icon={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
+          title="Year-over-Year Comparison Required"
+          subTitle="This page compares time allocation between consecutive years. Please select a specific year from the global year selector to view gains and losses."
+          extra={
+            <Text type="secondary">
+              Try selecting 2024, 2025, or another specific year to see how your time allocation changed from the previous year.
+            </Text>
+          }
+        />
+      </PageContainer>
+    );
+  }
+
+  // Calculate Comparison (only for specific year)
+  const currentYear = selectedYear as number;
+  const previousYear = currentYear - 1;
 
   const comparisonData = calculateYoYComparison(entries, currentYear, previousYear);
 
@@ -131,15 +157,6 @@ const GainsLossesPage: React.FC = () => {
       header={{
         title: 'Gains & Losses',
         subTitle: `Net time reallocation: ${previousYear} vs ${currentYear}`,
-        extra: [
-           <Select
-             key="year"
-             value={selectedYear}
-             onChange={setSelectedYear}
-             options={availableYears.map(y => ({ label: y.toString(), value: y }))}
-             style={{ width: 100 }}
-           />
-        ]
       }}
     >
       <Row gutter={[20, 20]}>

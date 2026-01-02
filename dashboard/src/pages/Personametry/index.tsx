@@ -14,9 +14,11 @@ import {
   FallOutlined,
   CalendarOutlined,
   TrophyOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import type { TimeEntry, DataMetadata } from '@/models/personametry';
 import { PERSONA_COLORS, PERSONA_SHORT_NAMES, YEAR_COLORS, STATUS_COLORS } from '@/models/personametry';
+import { useYear } from '@/contexts/YearContext';
 import {
   loadTimeEntries,
   filterByYear,
@@ -43,8 +45,9 @@ const PersonametryDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [metadata, setMetadata] = useState<DataMetadata | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number>(2022);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  
+  // Use global year context
+  const { selectedYear, setAvailableYears, availableYears, isAllTime } = useYear();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,7 +59,6 @@ const PersonametryDashboard: React.FC = () => {
         setMetadata(data.metadata);
         const years = getAvailableYears(data.entries);
         setAvailableYears(years);
-        setSelectedYear(years[0] || 2022);
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -64,10 +66,14 @@ const PersonametryDashboard: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [setAvailableYears]);
 
-  // Filter entries by selected year
-  const yearEntries = filterByYear(entries, selectedYear);
+  // Calculate total days for All Time average calculation
+  const allYears = getAvailableYears(entries);
+  const totalDaysAllTime = allYears.length * 365;
+
+  // Filter entries by selected year (or all if 'ALL')
+  const yearEntries = isAllTime ? entries : filterByYear(entries, selectedYear as number);
   
   // EXCLUDE SLEEP from main dashboard metrics
   const entriesExcludingSleep = yearEntries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
@@ -76,9 +82,12 @@ const PersonametryDashboard: React.FC = () => {
   const personaSummaries = groupByPersona(entriesExcludingSleep);
   const monthlyTrends = groupByMonth(entriesExcludingSleep);
   const totalHours = sumHours(entriesExcludingSleep);
+  
+  // Calculate total hours WITH sleep for comparison
+  const totalHoursWithSleep = sumHours(yearEntries);
 
-  // YoY comparison (excluding sleep)
-  const yoyComparison = calculateYoYComparison(entries, selectedYear, selectedYear - 1)
+  // YoY comparison (excluding sleep) - only when specific year selected
+  const yoyComparison = isAllTime ? [] : calculateYoYComparison(entries, selectedYear as number, (selectedYear as number) - 1)
     .filter(item => item.persona !== SLEEP_PERSONA);
 
   // Pie chart data - with percentage, hours, and explicit color
@@ -122,26 +131,17 @@ const PersonametryDashboard: React.FC = () => {
     );
   }
 
-  // Year options - NO "ALL YEARS" (that's now a separate page)
-  const yearOptions = availableYears.map((y) => ({ label: y.toString(), value: y }));
+  // Title shows year or "All Time"
+  const titleSuffix = isAllTime ? 'All Time' : selectedYear.toString();
 
   return (
     <PageContainer
       header={{
         title: (
           <span style={{ fontSize: 24, fontWeight: 600, color: '#333' }}>
-            Dashboard Overview
+            Overview {isAllTime && <Tag color="#0D7377" icon={<GlobalOutlined />}>All Time</Tag>}
           </span>
         ),
-        extra: [
-          <Select
-            key="year"
-            value={selectedYear}
-            onChange={setSelectedYear}
-            style={{ width: 100 }}
-            options={yearOptions}
-          />,
-        ],
       }}
     >
       {/* Sparse Data Indicator */}
@@ -166,13 +166,13 @@ const PersonametryDashboard: React.FC = () => {
               valueStyle={{ color: '#0D7377', fontSize: 28, fontWeight: 600 }}
               prefix={<ClockCircleOutlined />}
             />
-            <Text type="secondary" style={{ fontSize: 11 }}>Excludes sleep</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>(excl. sleep)</Text>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <ProCard style={{ ...CARD_STYLE, height: 120 }}>
-            <div style={{ marginBottom: 6 }}>
-              <Text strong style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)' }}>Top 3 Personas</Text>
+          <div style={{ marginBottom: 6 }}>
+              <Text strong style={{ fontSize: 14, color: '#333' }}>Top 3 Personas</Text>
               <Text type="secondary" style={{ fontSize: 10, marginLeft: 4 }}>(excl. sleep)</Text>
             </div>
             <Space direction="vertical" size={2} style={{ width: '100%' }}>
@@ -198,18 +198,20 @@ const PersonametryDashboard: React.FC = () => {
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
               prefix={<CalendarOutlined />}
             />
-            <Text type="secondary" style={{ fontSize: 11 }}>{metadata?.source?.includes('harvest') ? 'Harvest' : 'QuickSight'} data</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>(excl. sleep)</Text>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <ProCard style={{ ...CARD_STYLE, height: 120 }}>
             <Statistic
               title={<Text strong>Avg. Hours/Day</Text>}
-              value={(totalHours / 365).toFixed(1)}
+              value={(totalHours / (isAllTime ? totalDaysAllTime : 365)).toFixed(1)}
               suffix="hrs"
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
             />
-            <Text type="secondary" style={{ fontSize: 11 }}>{selectedYear}</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              (excl. sleep) • With sleep: {(totalHoursWithSleep / (isAllTime ? totalDaysAllTime : 365)).toFixed(1)}h/day
+            </Text>
           </ProCard>
         </Col>
       </Row>
@@ -222,7 +224,7 @@ const PersonametryDashboard: React.FC = () => {
             title={
               <span>
                 <Title level={5} style={{ margin: 0, display: 'inline' }}>Time Distribution</Title>
-                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>(excludes sleep)</Text>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>(excl. sleep)</Text>
               </span>
             }
             style={{ ...CARD_STYLE, height: 420 }}
@@ -288,7 +290,12 @@ const PersonametryDashboard: React.FC = () => {
         {/* Monthly Hours Bar Chart - IMPROVED FONT */}
         <Col xs={24} lg={14}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Monthly Hours ({selectedYear})</Title>}
+            title={
+              <span>
+                <Title level={5} style={{ margin: 0, display: 'inline' }}>Monthly Hours ({selectedYear})</Title>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>(excl. sleep)</Text>
+              </span>
+            }
             style={{ ...CARD_STYLE, height: 420 }}
           >
             <Column
@@ -296,9 +303,9 @@ const PersonametryDashboard: React.FC = () => {
               xField="month"
               yField="hours"
               height={320}
-              color={YEAR_COLORS[selectedYear] || '#0D7377'}
+              color={isAllTime ? '#0D7377' : (YEAR_COLORS[selectedYear as number] || '#0D7377')}
               columnWidthRatio={0.6}
-              label={{
+              label={isAllTime ? false : {
                 position: 'top',
                 content: ({ hours }: { hours: number }) => `${hours}`,
                 style: { 
@@ -323,48 +330,83 @@ const PersonametryDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Wheel of Life + YoY Comparison - Same Row 50/50 */}
+      {/* Wheel of Life + YoY Comparison Row */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
-        {/* Wheel of Life - Radar Chart */}
-        <Col xs={24} lg={12}>
+        {/* Wheel of Life - Radar Chart - Always shown, adapts for All Time */}
+        <Col xs={24} lg={isAllTime ? 24 : 12}>
           <ProCard
             title={
               <span>
-                <Title level={5} style={{ margin: 0, display: 'inline' }}>Wheel of Life</Title>
+                <Title level={5} style={{ margin: 0, display: 'inline' }}>
+                  Wheel of Life {isAllTime ? '(Last 5 Years)' : ''}
+                </Title>
                 <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>(excl. sleep)</Text>
               </span>
             }
             style={{ ...CARD_STYLE, height: 380 }}
           >
             {(() => {
-              // Calculate balance scores for radar chart
-              const prevYearEntries = filterByYear(entries, selectedYear - 1).filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
-              
               const radarData: { persona: string; score: number; year: string }[] = [];
               
-              // Current year data
-              personaSummaries.forEach((p) => {
-                const shortName = PERSONA_SHORT_NAMES[p.persona] || p.persona;
-                radarData.push({
-                  persona: shortName,
-                  score: p.percentageOfTotal,
-                  year: selectedYear.toString(),
-                });
-              });
+              // Get all unique personas (excluding sleep) for complete radar circle
+              const allPersonaNames = Object.keys(PERSONA_SHORT_NAMES).filter(p => p !== SLEEP_PERSONA);
               
-              // Previous year data for comparison
-              const prevSummaries = groupByPersona(prevYearEntries);
-              prevSummaries.forEach((p) => {
-                const shortName = PERSONA_SHORT_NAMES[p.persona] || p.persona;
-                radarData.push({
-                  persona: shortName,
-                  score: p.percentageOfTotal,
-                  year: (selectedYear - 1).toString(),
+              if (isAllTime) {
+                // All Time: Show each year as a separate series
+                allYears.slice(0, 5).forEach((year) => { // Limit to 5 most recent years
+                  const yearEntriesForRadar = filterByYear(entries, year).filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
+                  const summaries = groupByPersona(yearEntriesForRadar);
+                  const summaryMap = new Map(summaries.map(s => [s.persona, s.percentageOfTotal]));
+                  
+                  // Ensure all personas are represented for a complete circle
+                  allPersonaNames.forEach((persona) => {
+                    const shortName = PERSONA_SHORT_NAMES[persona] || persona;
+                    radarData.push({
+                      persona: shortName,
+                      score: summaryMap.get(persona) || 0,
+                      year: year.toString(),
+                    });
+                  });
                 });
+              } else {
+                // Specific year: Show current vs previous year
+                const prevYearEntries = filterByYear(entries, (selectedYear as number) - 1).filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
+                
+                // Current year data with all personas
+                const currentMap = new Map(personaSummaries.map(s => [s.persona, s.percentageOfTotal]));
+                allPersonaNames.forEach((persona) => {
+                  const shortName = PERSONA_SHORT_NAMES[persona] || persona;
+                  radarData.push({
+                    persona: shortName,
+                    score: currentMap.get(persona) || 0,
+                    year: (selectedYear as number).toString(),
+                  });
+                });
+                
+                // Previous year data with all personas
+                const prevSummaries = groupByPersona(prevYearEntries);
+                const prevMap = new Map(prevSummaries.map(s => [s.persona, s.percentageOfTotal]));
+                allPersonaNames.forEach((persona) => {
+                  const shortName = PERSONA_SHORT_NAMES[persona] || persona;
+                  radarData.push({
+                    persona: shortName,
+                    score: prevMap.get(persona) || 0,
+                    year: ((selectedYear as number) - 1).toString(),
+                  });
+                });
+              }
+
+              // Generate colors based on years in data
+              const uniqueYears = [...new Set(radarData.map(d => d.year))].sort();
+              const yearColorMap: Record<string, string> = {};
+              const colorScale = ['#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1', '#13c2c2'];
+              uniqueYears.forEach((year, idx) => {
+                yearColorMap[year] = YEAR_COLORS[parseInt(year)] || colorScale[idx % colorScale.length];
               });
 
               return (
                 <Radar
+                  key={`radar-${isAllTime ? 'all' : selectedYear}-${uniqueYears.join('-')}`}
                   data={radarData}
                   xField="persona"
                   yField="score"
@@ -388,13 +430,11 @@ const PersonametryDashboard: React.FC = () => {
                   }}
                   area={{
                     smooth: true,
-                    style: { fillOpacity: 0.35 },
+                    style: { fillOpacity: 0.25 },
                   }}
                   line={{ size: 2 }}
                   point={{ size: 3 }}
-                  color={({ year }: { year: string }) => 
-                    year === selectedYear.toString() ? '#52c41a' : '#faad14'
-                  }
+                  color={({ year }: { year: string }) => yearColorMap[year] || '#888'}
                   legend={{
                     position: 'bottom',
                     itemName: { style: { fontSize: 11 } },
@@ -411,57 +451,59 @@ const PersonametryDashboard: React.FC = () => {
           </ProCard>
         </Col>
 
-        {/* YoY Comparison Grid */}
-        <Col xs={24} lg={12}>
-          <ProCard
-            title={
-              <span>
-                <Title level={5} style={{ margin: 0, display: 'inline' }}>
-                  YoY Comparison ({selectedYear} vs {selectedYear - 1})
-                </Title>
-                <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>(excl. sleep)</Text>
-              </span>
-            }
-            style={{ ...CARD_STYLE, height: 380 }}
-            bodyStyle={{ overflow: 'auto' }}
-          >
-            <Row gutter={[12, 12]}>
-              {yoyComparison.map((item) => (
-                <Col key={item.persona} xs={12} sm={8}>
-                  <div
-                    style={{
-                      padding: 12,
-                      borderRadius: 6,
-                      background: '#fafafa',
-                      borderLeft: `3px solid ${PERSONA_COLORS[item.persona]}`,
-                    }}
-                  >
-                    <Text strong style={{ color: PERSONA_COLORS[item.persona], fontSize: 12 }}>
-                      {PERSONA_SHORT_NAMES[item.persona]}
-                    </Text>
-                    <div style={{ marginTop: 4 }}>
-                      <Text style={{ fontSize: 16, fontWeight: 600 }}>
-                        {formatHours(item.currentYearHours)}
+        {/* YoY Comparison Grid - Only for specific year */}
+        {!isAllTime && (
+          <Col xs={24} lg={12}>
+            <ProCard
+              title={
+                <span>
+                  <Title level={5} style={{ margin: 0, display: 'inline' }}>
+                    YoY Comparison ({selectedYear} vs {(selectedYear as number) - 1})
+                  </Title>
+                  <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>(excl. sleep)</Text>
+                </span>
+              }
+              style={{ ...CARD_STYLE, height: 380 }}
+              bodyStyle={{ overflow: 'auto' }}
+            >
+              <Row gutter={[12, 12]}>
+                {yoyComparison.map((item) => (
+                  <Col key={item.persona} xs={12} sm={8}>
+                    <div
+                      style={{
+                        padding: 12,
+                        borderRadius: 6,
+                        background: '#fafafa',
+                        borderLeft: `3px solid ${PERSONA_COLORS[item.persona]}`,
+                      }}
+                    >
+                      <Text strong style={{ color: PERSONA_COLORS[item.persona], fontSize: 12 }}>
+                        {PERSONA_SHORT_NAMES[item.persona]}
                       </Text>
-                      <Text type="secondary" style={{ fontSize: 11 }}> hrs</Text>
-                    </div>
-                    <div style={{ marginTop: 2 }}>
-                      {item.deltaHours >= 0 ? (
-                        <Text style={{ color: STATUS_COLORS.success, fontSize: 11 }}>
-                          <RiseOutlined /> +{formatHours(item.deltaHours)} ({item.percentageChange > 0 ? '+' : ''}{item.percentageChange}%)
+                      <div style={{ marginTop: 4 }}>
+                        <Text style={{ fontSize: 16, fontWeight: 600 }}>
+                          {formatHours(item.currentYearHours)}
                         </Text>
-                      ) : (
-                        <Text style={{ color: STATUS_COLORS.error, fontSize: 11 }}>
-                          <FallOutlined /> {formatHours(item.deltaHours)} ({item.percentageChange}%)
-                        </Text>
-                      )}
+                        <Text type="secondary" style={{ fontSize: 11 }}> hrs</Text>
+                      </div>
+                      <div style={{ marginTop: 2 }}>
+                        {item.deltaHours >= 0 ? (
+                          <Text style={{ color: STATUS_COLORS.success, fontSize: 11 }}>
+                            <RiseOutlined /> +{formatHours(item.deltaHours)} ({item.percentageChange > 0 ? '+' : ''}{item.percentageChange}%)
+                          </Text>
+                        ) : (
+                          <Text style={{ color: STATUS_COLORS.error, fontSize: 11 }}>
+                            <FallOutlined /> {formatHours(item.deltaHours)} ({item.percentageChange}%)
+                          </Text>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Col>
-              ))}
-            </Row>
-          </ProCard>
-        </Col>
+                  </Col>
+                ))}
+              </Row>
+            </ProCard>
+          </Col>
+        )}
       </Row>
     </PageContainer>
   );

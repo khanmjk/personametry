@@ -6,11 +6,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Spin, Alert, Select, Statistic, Typography, Divider } from 'antd';
+import { Row, Col, Spin, Alert, Statistic, Typography, Divider, Tag } from 'antd';
 import { Column, Line } from '@ant-design/charts';
-import { ClockCircleOutlined, RiseOutlined, FallOutlined, MoonOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, RiseOutlined, FallOutlined, MoonOutlined, GlobalOutlined } from '@ant-design/icons';
 import type { TimeEntry } from '@/models/personametry';
 import { PERSONA_COLORS, STATUS_COLORS } from '@/models/personametry';
+import { useYear } from '@/contexts/YearContext';
 import {
   loadTimeEntries,
   getAvailableYears,
@@ -35,8 +36,9 @@ const SleepPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(2022);
+  
+  // Use global year context
+  const { selectedYear, setAvailableYears, availableYears, isAllTime } = useYear();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,7 +48,6 @@ const SleepPage: React.FC = () => {
         setEntries(data.entries);
         const years = getAvailableYears(data.entries);
         setAvailableYears(years);
-        setSelectedYear(years[0] || 2022);
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -54,23 +55,27 @@ const SleepPage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [setAvailableYears]);
 
-  // Filter for sleep only
-  const yearEntries = filterByYear(entries, selectedYear);
+  // Filter for sleep only - handle All Time mode
+  const allSleepEntries = filterByPersona(entries, SLEEP_PERSONA);
+  const yearEntries = isAllTime ? entries : filterByYear(entries, selectedYear as number);
   const sleepEntries = filterByPersona(yearEntries, SLEEP_PERSONA);
   const sleepHours = sumHours(sleepEntries);
   const monthlyData = groupByMonth(sleepEntries);
 
-  // Previous year comparison
-  const prevYearEntries = filterByYear(entries, selectedYear - 1);
-  const prevSleepEntries = filterByPersona(prevYearEntries, SLEEP_PERSONA);
-  const prevSleepHours = sumHours(prevSleepEntries);
+  // Calculate total days for averaging
+  const totalDays = isAllTime ? availableYears.length * 365 : 365;
+
+  // Previous year comparison - only for specific year
+  const prevSleepHours = !isAllTime 
+    ? sumHours(filterByPersona(filterByYear(entries, (selectedYear as number) - 1), SLEEP_PERSONA))
+    : 0;
   const deltaHours = sleepHours - prevSleepHours;
   const deltaPercent = prevSleepHours > 0 ? ((deltaHours / prevSleepHours) * 100) : 0;
 
   // Average per day
-  const avgPerDay = sleepHours / 365;
+  const avgPerDay = sleepHours / totalDays;
   const targetPerDay = 8; // Target 8 hours sleep
   const isOnTarget = avgPerDay >= 7.5;
 
@@ -90,6 +95,9 @@ const SleepPage: React.FC = () => {
       hours: Math.round(sumHours(ySleepEntries)),
     };
   }).reverse();
+
+  // Title suffix
+  const titleSuffix = isAllTime ? 'All Time' : selectedYear.toString();
 
   if (loading) {
     return (
@@ -117,17 +125,9 @@ const SleepPage: React.FC = () => {
           <span style={{ fontSize: 24, fontWeight: 600, color: PERSONA_COLORS[SLEEP_PERSONA] }}>
             <MoonOutlined style={{ marginRight: 8 }} />
             Sleep & Life Constraints
+            {isAllTime && <Tag color="#0D7377" icon={<GlobalOutlined />} style={{ marginLeft: 12 }}>All Time</Tag>}
           </span>
         ),
-        extra: [
-          <Select
-            key="year"
-            value={selectedYear}
-            onChange={setSelectedYear}
-            style={{ width: 90 }}
-            options={availableYears.map((y) => ({ label: y.toString(), value: y }))}
-          />,
-        ],
       }}
     >
       {/* KPI Row */}
@@ -142,7 +142,7 @@ const SleepPage: React.FC = () => {
               prefix={<ClockCircleOutlined />}
             />
             <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">{selectedYear} total</Text>
+            <Text type="secondary">{titleSuffix} total</Text>
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
@@ -161,25 +161,30 @@ const SleepPage: React.FC = () => {
             <Text type="secondary">Target: {targetPerDay} hrs/day</Text>
           </ProCard>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <ProCard style={CARD_STYLE}>
-            <Statistic
-              title={<Text strong>vs {selectedYear - 1}</Text>}
-              value={deltaHours >= 0 ? `+${formatHours(deltaHours)}` : formatHours(deltaHours)}
-              suffix="hrs"
-              valueStyle={{ 
-                color: deltaHours >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error, 
-                fontSize: 28, 
-                fontWeight: 600 
-              }}
-              prefix={deltaHours >= 0 ? <RiseOutlined /> : <FallOutlined />}
-            />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text style={{ color: deltaPercent >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error }}>
-              {deltaPercent >= 0 ? '+' : ''}{deltaPercent.toFixed(1)}%
-            </Text>
-          </ProCard>
-        </Col>
+        
+        {/* vs Previous Year - only show for specific year */}
+        {!isAllTime && (
+          <Col xs={24} sm={12} md={6}>
+            <ProCard style={CARD_STYLE}>
+              <Statistic
+                title={<Text strong>vs {(selectedYear as number) - 1}</Text>}
+                value={deltaHours >= 0 ? `+${formatHours(deltaHours)}` : formatHours(deltaHours)}
+                suffix="hrs"
+                valueStyle={{ 
+                  color: deltaHours >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error, 
+                  fontSize: 28, 
+                  fontWeight: 600 
+                }}
+                prefix={deltaHours >= 0 ? <RiseOutlined /> : <FallOutlined />}
+              />
+              <Divider style={{ margin: '12px 0' }} />
+              <Text style={{ color: deltaPercent >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error }}>
+                {deltaPercent >= 0 ? '+' : ''}{deltaPercent.toFixed(1)}%
+              </Text>
+            </ProCard>
+          </Col>
+        )}
+        
         <Col xs={24} sm={12} md={6}>
           <ProCard style={CARD_STYLE}>
             <Statistic
@@ -195,32 +200,92 @@ const SleepPage: React.FC = () => {
 
       {/* Charts Row */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
-        <Col xs={24} lg={14}>
+        {/* Monthly chart - adapts for All Time */}
+        <Col xs={24} lg={isAllTime ? 24 : 14}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Monthly Sleep Hours ({selectedYear})</Title>}
+            title={
+              <Title level={5} style={{ margin: 0 }}>
+                {isAllTime ? 'Average Monthly Sleep (All Years)' : `Monthly Sleep Hours (${selectedYear})`}
+              </Title>
+            }
             style={{ ...CARD_STYLE, height: 380 }}
           >
-            <Column
-              data={monthlyChartData}
-              xField="month"
-              yField="hours"
-              height={290}
-              color={PERSONA_COLORS[SLEEP_PERSONA]}
-              columnWidthRatio={0.6}
-              label={{
-                position: 'top',
-                content: ({ hours }: { hours: number }) => `${hours}`,
-                style: { fill: '#333', fontSize: 12, fontWeight: 600 },
-              }}
-              xAxis={{ label: { style: { fontSize: 11 } } }}
-              yAxis={{
-                title: { text: 'Hours', style: { fontSize: 12 } },
-                grid: { line: { style: { stroke: '#f0f0f0' } } },
-              }}
-            />
+            {isAllTime ? (
+              // All Time: Average monthly sleep across all years
+              <Column
+                data={(() => {
+                  // Calculate average hours per month across ALL years
+                  const monthlyTotals: Record<string, { total: number; count: number }> = {};
+                  const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  
+                  // Initialize all months
+                  monthOrder.forEach(m => {
+                    monthlyTotals[m] = { total: 0, count: 0 };
+                  });
+                  
+                  // Aggregate all years' data
+                  availableYears.forEach((year) => {
+                    const yearEntriesForChart = filterByYear(entries, year);
+                    const sleepForYear = filterByPersona(yearEntriesForChart, SLEEP_PERSONA);
+                    const monthlyForYear = groupByMonth(sleepForYear);
+                    monthlyForYear.forEach((m) => {
+                      const shortMonth = m.monthName.substring(0, 3);
+                      if (monthlyTotals[shortMonth]) {
+                        monthlyTotals[shortMonth].total += m.hours;
+                        monthlyTotals[shortMonth].count += 1;
+                      }
+                    });
+                  });
+                  
+                  // Calculate averages
+                  return monthOrder.map(month => ({
+                    month,
+                    hours: monthlyTotals[month].count > 0 
+                      ? Math.round(monthlyTotals[month].total / monthlyTotals[month].count) 
+                      : 0,
+                  }));
+                })()}
+                xField="month"
+                yField="hours"
+                height={290}
+                color={PERSONA_COLORS[SLEEP_PERSONA]}
+                columnWidthRatio={0.6}
+                label={{
+                  position: 'top',
+                  content: ({ hours }: { hours: number }) => `${hours}`,
+                  style: { fill: '#333', fontSize: 12, fontWeight: 600 },
+                }}
+                xAxis={{ label: { style: { fontSize: 11 } } }}
+                yAxis={{
+                  title: { text: 'Avg Hours', style: { fontSize: 12 } },
+                  grid: { line: { style: { stroke: '#f0f0f0' } } },
+                }}
+              />
+            ) : (
+              // Specific year: Regular column chart
+              <Column
+                data={monthlyChartData}
+                xField="month"
+                yField="hours"
+                height={290}
+                color={PERSONA_COLORS[SLEEP_PERSONA]}
+                columnWidthRatio={0.6}
+                label={{
+                  position: 'top',
+                  content: ({ hours }: { hours: number }) => `${hours}`,
+                  style: { fill: '#333', fontSize: 12, fontWeight: 600 },
+                }}
+                xAxis={{ label: { style: { fontSize: 11 } } }}
+                yAxis={{
+                  title: { text: 'Hours', style: { fontSize: 12 } },
+                  grid: { line: { style: { stroke: '#f0f0f0' } } },
+                }}
+              />
+            )}
           </ProCard>
         </Col>
-        <Col xs={24} lg={10}>
+        
+        <Col xs={24} lg={isAllTime ? 24 : 10}>
           <ProCard
             title={<Title level={5} style={{ margin: 0 }}>Year-over-Year Trend</Title>}
             style={{ ...CARD_STYLE, height: 380 }}

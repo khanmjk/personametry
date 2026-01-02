@@ -11,6 +11,8 @@ import {
   Question,
   SelectLang,
 } from '@/components';
+import GlobalYearSelector from '@/components/GlobalYearSelector';
+import { YearProvider } from '@/contexts/YearContext';
 import { currentUser as queryCurrentUser } from '@/services/ant-design-pro/api';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
@@ -49,22 +51,29 @@ export async function getInitialState(): Promise<{
   };
 }
 
+/**
+ * UmiJS Root Container - wraps the entire application
+ * This is the right place to put global providers like YearContext
+ * @see https://umijs.org/docs/api/runtime-config#rootcontainer
+ */
+export function rootContainer(container: React.ReactNode) {
+  return <YearProvider>{container}</YearProvider>;
+}
+
 // Personametry Layout Configuration
 export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
 }) => {
   return {
-    // Clean header - remove unnecessary actions
-    actionsRender: () => [],
-    // Simple avatar
-    avatarProps: {
-      src: initialState?.currentUser?.avatar,
-      title: <AvatarName />,
-      render: (_, avatarChildren) => (
-        <AvatarDropdown>{avatarChildren}</AvatarDropdown>
-      ),
-    },
+    // Center the global year selector in the header
+    actionsRender: () => [
+      <div key="year-selector" style={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
+        <GlobalYearSelector />
+      </div>
+    ],
+    // Remove avatar - year selector is the main header element now
+    avatarProps: undefined,
     // DISABLED: No watermarks for clean executive look
     waterMarkProps: {
       content: '',
@@ -79,7 +88,7 @@ export const layout: RunTimeLayoutConfig = ({
     // DISABLED: No dev links
     links: [],
     menuHeaderRender: undefined,
-    // Clean children - no settings drawer for executive look
+    // Children render - no extra wrapper needed, rootContainer handles provider
     childrenRender: (children) => {
       return <>{children}</>;
     },

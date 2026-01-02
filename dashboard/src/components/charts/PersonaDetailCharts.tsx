@@ -73,17 +73,25 @@ const PersonaDetailCharts: React.FC<PersonaDetailChartsProps> = ({
      return parseInt(a.week) - parseInt(b.week);
   }) : [];
 
-  // 2. Monthly Data (For All)
-  const monthlyData = groupByMonth(relevantEntries).map(m => ({
-    month: m.monthName.substring(0, 3), // "Jan", "Feb"
-    monthNum: m.month,
-    year: m.year.toString(),
-    hours: Math.round(m.hours)
-  })).sort((a,b) => {
-      // Sort logic: We want Month X-axis, Grouped by Year. 
-      // Actually G2Plot needs raw data. For X-axis sorting, we might need to rely on monthNum if 'month' is string.
-      if (a.year !== b.year) return parseInt(a.year) - parseInt(b.year);
-      return a.monthNum - b.monthNum;
+  // 2. Monthly Data (For All) - pad with all 12 months for each year to ensure consistent ordering
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const rawMonthlyData = groupByMonth(relevantEntries);
+  // Create a lookup map: "year-month" -> hours
+  const monthlyLookup = new Map(rawMonthlyData.map(m => [`${m.year}-${m.month}`, m.hours]));
+  
+  // Generate padded data for all years and all months
+  const monthlyData: { month: string; monthNum: number; year: string; hours: number }[] = [];
+  yearsToShow.sort().forEach(year => {
+    MONTH_SHORT.forEach((monthName, idx) => {
+      const monthNum = idx + 1;
+      const hours = monthlyLookup.get(`${year}-${monthNum}`) || 0;
+      monthlyData.push({
+        month: monthName,
+        monthNum,
+        year: year.toString(),
+        hours: Math.round(hours)
+      });
+    });
   });
 
   // 3. Annual Summary (For All)
@@ -148,14 +156,23 @@ const PersonaDetailCharts: React.FC<PersonaDetailChartsProps> = ({
             title={isProfessional ? "Monthly Comparison (3 Years)" : "Monthly Comparison (2 Years)"}
             style={{ ...CARD_STYLE, height: 400 }}
           >
-             <Column 
+              <Column 
+                key={`monthly-${persona}`}
                 {...commonConfig}
                 data={monthlyData}
                 xField="month"
                 yField="hours"
                 height={300}
                 yAxis={{ title: { text: 'Hours' } }}
-                // Explicitly set meta to sort months if needed, but array sort usually suffices
+                xAxis={{
+                  label: { autoHide: false },
+                }}
+                meta={{
+                  month: {
+                    type: 'cat',
+                    values: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                  }
+                }}
              />
           </ProCard>
         </Col>

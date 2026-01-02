@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Spin, Alert, Statistic, Typography, Divider, Table, Select, Progress } from 'antd';
+import { Row, Col, Spin, Alert, Statistic, Typography, Divider, Table, Progress, Tag } from 'antd';
 import { Pie, Line } from '@ant-design/charts';
 import {
   HeartOutlined,
@@ -14,8 +14,10 @@ import {
   ClockCircleOutlined,
   RiseOutlined,
   FallOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import type { TimeEntry } from '@/models/personametry';
+import { useYear } from '@/contexts/YearContext';
 import {
   loadTimeEntries,
   getAvailableYears,
@@ -42,9 +44,10 @@ const IndividualPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number | 'ALL'>('ALL');
   const [analysis, setAnalysis] = useState<IndividualAnalysis | null>(null);
+
+  // Use global year context - this page treats 'ALL' as all-time
+  const { selectedYear, setAvailableYears, isAllTime } = useYear();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,8 +58,10 @@ const IndividualPage: React.FC = () => {
         const years = getAvailableYears(data.entries);
         setAvailableYears(years);
         
-        // Initial analysis (all time)
-        const result = calculateIndividualPatterns(data.entries);
+        // Initial analysis based on global selection
+        const result = isAllTime 
+          ? calculateIndividualPatterns(data.entries)
+          : calculateIndividualPatterns(data.entries, selectedYear as number);
         setAnalysis(result);
         setLoading(false);
       } catch (err) {
@@ -65,17 +70,17 @@ const IndividualPage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [setAvailableYears]);
 
-  // Update analysis when year changes
+  // Update analysis when global year changes
   useEffect(() => {
     if (entries.length > 0) {
-      const result = selectedYear === 'ALL' 
+      const result = isAllTime 
         ? calculateIndividualPatterns(entries)
-        : calculateIndividualPatterns(entries, selectedYear);
+        : calculateIndividualPatterns(entries, selectedYear as number);
       setAnalysis(result);
     }
-  }, [selectedYear, entries]);
+  }, [selectedYear, entries, isAllTime]);
 
   if (loading) {
     return (
@@ -236,21 +241,10 @@ const IndividualPage: React.FC = () => {
           <span style={{ fontSize: 24, fontWeight: 600, color: '#333' }}>
             <HeartOutlined style={{ marginRight: 8, color: '#722ed1' }} />
             Individual • Self Investment
+            {isAllTime && <Tag color="#0D7377" icon={<GlobalOutlined />} style={{ marginLeft: 12 }}>All Time</Tag>}
           </span>
         ),
         subTitle: 'Health, Learning, Hobbies & Spiritual',
-        extra: [
-          <Select
-            key="year-filter"
-            value={selectedYear}
-            onChange={setSelectedYear}
-            style={{ width: 140 }}
-            options={[
-              { label: 'All Time', value: 'ALL' },
-              ...availableYears.map(y => ({ label: y.toString(), value: y })),
-            ]}
-          />
-        ],
       }}
     >
       {/* KPI Row */}

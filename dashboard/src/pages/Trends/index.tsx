@@ -6,10 +6,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Spin, Alert, Select, Space, Typography, Segmented } from 'antd';
+import { Row, Col, Spin, Alert, Select, Space, Typography, Tag } from 'antd';
 import { Column, Pie } from '@ant-design/charts';
+import { GlobalOutlined } from '@ant-design/icons';
 import YearlyStackedBar from '@/components/charts/YearlyStackedBar';
 import type { TimeEntry, DataMetadata } from '@/models/personametry';
+import { useYear } from '@/contexts/YearContext';
 import {
   PERSONA_COLORS,
   PERSONA_SHORT_NAMES,
@@ -42,8 +44,13 @@ const TrendsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [metadata, setMetadata] = useState<DataMetadata | null>(null);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [comparisonYear, setComparisonYear] = useState<number>(2022);
+  const [localYears, setLocalYears] = useState<number[]>([]);
+
+  // Use global year context
+  const { selectedYear, setAvailableYears, isAllTime } = useYear();
+  
+  // For comparison, use global selectedYear or fallback to latest
+  const comparisonYear = isAllTime ? localYears[0] : (selectedYear as number);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,8 +60,8 @@ const TrendsPage: React.FC = () => {
         setEntries(data.entries);
         setMetadata(data.metadata);
         const years = getAvailableYears(data.entries);
+        setLocalYears(years);
         setAvailableYears(years);
-        setComparisonYear(years[0] || 2022);
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -62,15 +69,15 @@ const TrendsPage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [setAvailableYears]);
 
   const yoyData = calculateYoYComparison(entries, comparisonYear, comparisonYear - 1);
 
-  // Work-Life Balance calculations
-  const yearEntries = filterByYear(entries, comparisonYear);
-  const workHours = sumHours(filterByMetaWorkLife(yearEntries, MetaWorkLife.WORK));
-  const lifeHours = sumHours(filterByMetaWorkLife(yearEntries, MetaWorkLife.LIFE));
-  const sleepHours = sumHours(filterByMetaWorkLife(yearEntries, MetaWorkLife.SLEEP_LIFE));
+  // Work-Life Balance calculations - use all entries for All Time, filtered for specific year
+  const entriesForPie = isAllTime ? entries : filterByYear(entries, comparisonYear);
+  const workHours = sumHours(filterByMetaWorkLife(entriesForPie, MetaWorkLife.WORK));
+  const lifeHours = sumHours(filterByMetaWorkLife(entriesForPie, MetaWorkLife.LIFE));
+  const sleepHours = sumHours(filterByMetaWorkLife(entriesForPie, MetaWorkLife.SLEEP_LIFE));
   const totalHours = workHours + lifeHours + sleepHours;
 
   const workLifeData = [
@@ -118,26 +125,19 @@ const TrendsPage: React.FC = () => {
   return (
     <PageContainer
       header={{
-        title: <span style={{ fontSize: 24, fontWeight: 600 }}>Trend Analysis</span>,
-        extra: [
-          <Space key="controls" align="center">
-            <Text>Compare:</Text>
-            <Select
-              value={comparisonYear}
-              onChange={setComparisonYear}
-              style={{ width: 90 }}
-              options={availableYears.map((y) => ({ label: y.toString(), value: y }))}
-            />
-            <Text>vs {comparisonYear - 1}</Text>
-          </Space>,
-        ],
+        title: (
+          <span style={{ fontSize: 24, fontWeight: 600 }}>
+            Trend Analysis
+            {isAllTime && <Tag color="#0D7377" icon={<GlobalOutlined />} style={{ marginLeft: 12 }}>All Time</Tag>}
+          </span>
+        ),
       }}
     >
-      {/* Row 1: Work-Life Balance + YoY Change */}
+      {/* Row 1: Work-Life Balance + YoY Change - YoY only for specific year */}
       <Row gutter={[20, 20]}>
-        <Col xs={24} lg={8}>
+        <Col xs={24} lg={isAllTime ? 24 : 8}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Work-Life Balance</Title>}
+            title={<Title level={5} style={{ margin: 0 }}>Work-Life Balance {isAllTime ? '(All Years)' : `(${comparisonYear})`}</Title>}
             style={{ ...CARD_STYLE, height: 380 }}
           >
             <Row gutter={16} align="middle" style={{ height: '100%' }}>
@@ -194,14 +194,16 @@ const TrendsPage: React.FC = () => {
                 </div>
               </Col>
             </Row>
-          </ProCard>
+        </ProCard>
         </Col>
 
-        <Col xs={24} lg={16}>
-          <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Year-over-Year Comparison ({comparisonYear - 1} vs {comparisonYear})</Title>}
-            style={{ ...CARD_STYLE, height: 380 }}
-          >
+        {/* YoY Comparison - Only for specific year */}
+        {!isAllTime && (
+          <Col xs={24} lg={16}>
+            <ProCard
+              title={<Title level={5} style={{ margin: 0 }}>Year-over-Year Comparison ({comparisonYear - 1} vs {comparisonYear})</Title>}
+              style={{ ...CARD_STYLE, height: 380 }}
+            >
             <Column
               data={[
                 ...groupByPersona(filterByYear(entries, comparisonYear - 1)).map(p => ({
@@ -253,7 +255,8 @@ const TrendsPage: React.FC = () => {
               }}
             />
           </ProCard>
-        </Col>
+          </Col>
+        )}
       </Row>
 
       {/* Row 2: Total Hours by Year & Persona */}

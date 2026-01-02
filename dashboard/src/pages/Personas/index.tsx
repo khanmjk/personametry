@@ -6,16 +6,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { Row, Col, Spin, Alert, Select, Statistic, Tag, Table, Progress, Space, Typography } from 'antd';
+import { Row, Col, Spin, Alert, Statistic, Tag, Table, Progress, Space, Typography } from 'antd';
 import { Column } from '@ant-design/charts';
 import {
   RiseOutlined,
   FallOutlined,
   ClockCircleOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import PersonaDetailCharts from '@/components/charts/PersonaDetailCharts';
 import type { TimeEntry, PersonaSummary } from '@/models/personametry';
 import { PERSONA_COLORS, PERSONA_SHORT_NAMES } from '@/models/personametry';
+import { useYear } from '@/contexts/YearContext';
 import {
   loadTimeEntries,
   getAvailableYears,
@@ -33,9 +35,10 @@ const PersonasPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(2022);
   const [selectedPersona, setSelectedPersona] = useState<string>('');
+
+  // Use global year context
+  const { selectedYear, setAvailableYears, isAllTime } = useYear();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,10 +48,8 @@ const PersonasPage: React.FC = () => {
         setEntries(data.entries);
         const years = getAvailableYears(data.entries);
         setAvailableYears(years);
-        setSelectedYear(years[0] || 2022);
-        // Set default persona
-        const yearEntries = filterByYear(data.entries, years[0] || 2022);
-        const summaries = groupByPersona(yearEntries);
+        // Set default persona from first year or all entries
+        const summaries = groupByPersona(data.entries);
         if (summaries.length > 0) {
           setSelectedPersona(summaries[0].persona);
         }
@@ -59,27 +60,40 @@ const PersonasPage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [setAvailableYears]);
 
-  // Calculate data
-  const yearEntries = filterByYear(entries, selectedYear);
-  const personaSummaries = groupByPersona(yearEntries);
-  const personaEntries = filterByPersona(yearEntries, selectedPersona);
+  // Calculate data - handle All Time mode
+  const filteredEntries = isAllTime ? entries : filterByYear(entries, selectedYear as number);
+  const personaSummaries = groupByPersona(filteredEntries);
+  const personaEntries = filterByPersona(filteredEntries, selectedPersona);
   const monthlyData = groupByMonth(personaEntries);
 
-  // Monthly chart data (Restored)
-  const monthlyChartData = monthlyData.map(m => ({
-    month: m.monthName,
-    hours: Math.round(m.hours * 10) / 10,
+  // Monthly chart data - pad with all 12 months to ensure consistent ordering
+  const MONTH_ORDER = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyDataMap = new Map(monthlyData.map(m => [m.monthName, m.hours]));
+  const monthlyChartData = MONTH_ORDER.map(month => ({
+    month,
+    hours: Math.round((monthlyDataMap.get(month) || 0) * 10) / 10,
   }));
   
-  // Stats calculations
-  const prevYearEntries = filterByYear(entries, selectedYear - 1);
-  const prevSummaries = groupByPersona(prevYearEntries);
-  const prevPersonaHours = prevSummaries.find(p => p.persona === selectedPersona)?.totalHours || 0;
+  // Stats calculations - YoY only for specific year
   const currentPersonaHours = personaSummaries.find(p => p.persona === selectedPersona)?.totalHours || 0;
-  const deltaHours = currentPersonaHours - prevPersonaHours;
-  const deltaPercent = prevPersonaHours > 0 ? ((deltaHours / prevPersonaHours) * 100) : 0;
+  
+  // Previous year comparison - only for specific year
+  let prevPersonaHours = 0;
+  let deltaHours = 0;
+  let deltaPercent = 0;
+  
+  if (!isAllTime && typeof selectedYear === 'number') {
+    const prevYearEntries = filterByYear(entries, selectedYear - 1);
+    const prevSummaries = groupByPersona(prevYearEntries);
+    prevPersonaHours = prevSummaries.find(p => p.persona === selectedPersona)?.totalHours || 0;
+    deltaHours = currentPersonaHours - prevPersonaHours;
+    deltaPercent = prevPersonaHours > 0 ? ((deltaHours / prevPersonaHours) * 100) : 0;
+  }
+
+  // Title suffix
+  const titleSuffix = isAllTime ? 'All Time' : selectedYear.toString();
 
   // Table columns for persona summary
   const tableColumns = [
@@ -143,23 +157,19 @@ const PersonasPage: React.FC = () => {
   return (
     <PageContainer
       header={{
-        title: 'Personas',
-        subTitle: `Deep dive into ${selectedYear} persona performance`,
-        extra: [
-          <Select
-            key="year"
-            value={selectedYear}
-            onChange={setSelectedYear}
-            style={{ width: 100 }}
-            options={availableYears.map((y) => ({ label: y.toString(), value: y }))}
-          />,
-        ],
+        title: (
+          <span style={{ fontSize: 24, fontWeight: 600 }}>
+            Personas
+            {isAllTime && <Tag color="#0D7377" icon={<GlobalOutlined />} style={{ marginLeft: 12 }}>All Time</Tag>}
+          </span>
+        ),
+        subTitle: `Deep dive into ${titleSuffix} persona performance`,
       }}
     >
       {/* Persona Summary Table */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={10}>
-          <ProCard title="All Personas" style={{ height: 450 }}>
+          <ProCard title={`All Personas (${titleSuffix})`} style={{ height: 450 }}>
             <Table
               dataSource={personaSummaries}
               columns={tableColumns}
@@ -191,7 +201,7 @@ const PersonasPage: React.FC = () => {
             style={{ height: 450 }}
           >
             <Row gutter={[16, 16]}>
-              <Col span={8}>
+              <Col span={isAllTime ? 12 : 8}>
                 <Statistic
                   title="Total Hours"
                   value={formatHours(currentPersonaHours)}
@@ -199,49 +209,99 @@ const PersonasPage: React.FC = () => {
                   prefix={<ClockCircleOutlined />}
                 />
               </Col>
-              <Col span={8}>
-                <Statistic
-                  title="vs Previous Year"
-                  value={deltaHours >= 0 ? `+${formatHours(deltaHours)}` : formatHours(deltaHours)}
-                  suffix="hrs"
-                  valueStyle={{ color: deltaHours >= 0 ? '#52c41a' : '#ff4d4f' }}
-                  prefix={deltaHours >= 0 ? <RiseOutlined /> : <FallOutlined />}
-                />
-              </Col>
-              <Col span={8}>
-                <Statistic
-                  title="% Change"
-                  value={deltaPercent >= 0 ? `+${deltaPercent.toFixed(1)}` : deltaPercent.toFixed(1)}
-                  suffix="%"
-                  valueStyle={{ color: deltaPercent >= 0 ? '#52c41a' : '#ff4d4f' }}
-                />
-              </Col>
+              
+              {/* YoY comparison - only for specific year */}
+              {!isAllTime && (
+                <>
+                  <Col span={8}>
+                    <Statistic
+                      title={`vs ${(selectedYear as number) - 1}`}
+                      value={deltaHours >= 0 ? `+${formatHours(deltaHours)}` : formatHours(deltaHours)}
+                      suffix="hrs"
+                      valueStyle={{ color: deltaHours >= 0 ? '#52c41a' : '#ff4d4f' }}
+                      prefix={deltaHours >= 0 ? <RiseOutlined /> : <FallOutlined />}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <Statistic
+                      title="% Change"
+                      value={deltaPercent >= 0 ? `+${deltaPercent.toFixed(1)}` : deltaPercent.toFixed(1)}
+                      suffix="%"
+                      valueStyle={{ color: deltaPercent >= 0 ? '#52c41a' : '#ff4d4f' }}
+                    />
+                  </Col>
+                </>
+              )}
+              
+              {/* Entry count for All Time mode */}
+              {isAllTime && (
+                <Col span={12}>
+                  <Statistic
+                    title="Total Entries"
+                    value={personaEntries.length.toLocaleString()}
+                  />
+                </Col>
+              )}
             </Row>
+            
+            {/* Yearly Hours Chart - only for All Time mode */}
+            {isAllTime && (
+              <div style={{ marginTop: 24 }}>
+                <Text strong>Hours by Year</Text>
+                <Column
+                  data={(() => {
+                    const availableYears = getAvailableYears(entries).sort((a, b) => a - b);
+                    return availableYears.map(year => {
+                      const yearPersonaEntries = filterByPersona(filterByYear(entries, year), selectedPersona);
+                      const hours = yearPersonaEntries.reduce((sum, e) => sum + e.hours, 0);
+                      return {
+                        year: year.toString(),
+                        hours: Math.round(hours),
+                      };
+                    });
+                  })()}
+                  xField="year"
+                  yField="hours"
+                  height={200}
+                  color={PERSONA_COLORS[selectedPersona] || '#1890ff'}
+                  label={{
+                    position: 'top',
+                    content: ({ hours }: { hours: number }) => `${formatHours(hours)}`,
+                    style: { fontSize: 10, fill: '#666' },
+                  }}
+                />
+              </div>
+            )}
              
-            <div style={{ marginTop: 24 }}>
-              <Text strong>Monthly Breakdown ({selectedYear})</Text>
-              <Column
-                data={monthlyChartData}
-                xField="month"
-                yField="hours"
-                height={200}
-                color={PERSONA_COLORS[selectedPersona] || '#1890ff'}
-                label={{
-                  position: 'top',
-                  style: { fontSize: 10, fill: '#666' },
-                }}
-              />
-            </div>
+            {/* Monthly breakdown - only for specific year */}
+            {!isAllTime && (
+              <div style={{ marginTop: 24 }}>
+                <Text strong>Monthly Breakdown ({selectedYear})</Text>
+                <Column
+                  data={monthlyChartData}
+                  xField="month"
+                  yField="hours"
+                  height={200}
+                  color={PERSONA_COLORS[selectedPersona] || '#1890ff'}
+                  label={{
+                    position: 'top',
+                    style: { fontSize: 10, fill: '#666' },
+                  }}
+                />
+              </div>
+            )}
           </ProCard>
         </Col>
       </Row>
 
-      {/* NEW: Detailed Charts Section */}
-      <PersonaDetailCharts 
-        entries={entries} 
-        persona={selectedPersona} 
-        currentYear={selectedYear} 
-      />
+      {/* Detailed Charts Section - pass current year for specific year mode */}
+      {!isAllTime && (
+        <PersonaDetailCharts 
+          entries={entries} 
+          persona={selectedPersona} 
+          currentYear={selectedYear as number} 
+        />
+      )}
     </PageContainer>
   );
 };

@@ -1,5 +1,5 @@
 import { PageContainer } from '@ant-design/pro-components';
-import { Col, Row, Card, Statistic, Select } from 'antd';
+import { Col, Row, Card, Statistic, Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
 import {
   calculateWorkPatterns,
@@ -11,15 +11,17 @@ import {
 import WorkHeatmap from '@/components/charts/WorkHeatmap';
 import LateNightChart from '@/components/charts/LateNightChart';
 import StreakHistogram from '@/components/charts/StreakHistogram';
-import { FireOutlined, ClockCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { FireOutlined, ClockCircleOutlined, ThunderboltOutlined, GlobalOutlined } from '@ant-design/icons';
+import { useYear } from '@/contexts/YearContext';
 
 const WorkPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [fullAnalysis, setFullAnalysis] = useState<WorkPatternAnalysis | null>(null);
   const [yearAnalysis, setYearAnalysis] = useState<WorkPatternAnalysis | null>(null);
-  const [years, setYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [allEntries, setAllEntries] = useState<any[]>([]);
+
+  // Use global year context
+  const { selectedYear, setAvailableYears, isAllTime } = useYear();
 
   useEffect(() => {
     async function fetchData() {
@@ -31,19 +33,19 @@ const WorkPage: React.FC = () => {
         setAllEntries(entries);
         
         const availableYears = getAvailableYears(entries);
-        setYears(availableYears);
-        if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
-             setSelectedYear(availableYears[0]);
-        }
+        setAvailableYears(availableYears);
         
-        // 1. Full History for Heatmap
+        // 1. Full History for Heatmap (always computed)
         const history = calculateWorkPatterns(entries); 
         setFullAnalysis(history);
         
-        // 2. Initial Year Analysis
-        const currentYear = availableYears.includes(selectedYear) ? selectedYear : availableYears[0];
-        const yearly = calculateWorkPatterns(entries, currentYear);
-        setYearAnalysis(yearly);
+        // 2. Initial Year Analysis (if not All Time)
+        if (!isAllTime && typeof selectedYear === 'number') {
+          const yearly = calculateWorkPatterns(entries, selectedYear);
+          setYearAnalysis(yearly);
+        } else {
+          setYearAnalysis(history);
+        }
         
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -52,37 +54,45 @@ const WorkPage: React.FC = () => {
       }
     }
     fetchData();
-  }, []);
+  }, [setAvailableYears]);
 
+  // Recompute year analysis when selectedYear changes
   useEffect(() => {
-      if (allEntries.length > 0) {
-          const yearly = calculateWorkPatterns(allEntries, selectedYear);
-          setYearAnalysis(yearly);
+    if (allEntries.length > 0) {
+      if (isAllTime) {
+        // All Time - use full analysis
+        const history = calculateWorkPatterns(allEntries);
+        setYearAnalysis(history);
+      } else if (typeof selectedYear === 'number') {
+        const yearly = calculateWorkPatterns(allEntries, selectedYear);
+        setYearAnalysis(yearly);
       }
-  }, [selectedYear, allEntries]);
+    }
+  }, [selectedYear, allEntries, isAllTime]);
 
   if (!fullAnalysis || !yearAnalysis) return null;
 
+  // Display suffix
+  const titleSuffix = isAllTime ? 'All Time' : selectedYear.toString();
+
   return (
     <PageContainer
-        extra={[
-            <Select 
-                key="year-select"
-                value={selectedYear} 
-                onChange={setSelectedYear} 
-                style={{ width: 120 }}
-                options={years.map(y => ({ label: y, value: y }))}
-            />
-        ]}
+      header={{
+        title: (
+          <span style={{ fontSize: 24, fontWeight: 600 }}>
+            Work Patterns
+            {isAllTime && <Tag color="#0D7377" icon={<GlobalOutlined />} style={{ marginLeft: 12 }}>All Time</Tag>}
+          </span>
+        ),
+      }}
     >
 
-
-      {/* KPI Row (Year Specific) */}
+      {/* KPI Row (Year Specific or All Time) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title={`Late Days in ${selectedYear} (> 7 PM)`}
+              title={`Late Days ${isAllTime ? '(All Time)' : `in ${selectedYear}`} (> 7 PM)`}
               value={yearAnalysis.stats.totalLateDays}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#cf1322' }}
@@ -92,7 +102,7 @@ const WorkPage: React.FC = () => {
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title={`Max Streak in ${selectedYear} (Days)`}
+              title={`Max Streak ${isAllTime ? '(All Time)' : `in ${selectedYear}`} (Days)`}
               value={yearAnalysis.stats.maxStreakLength}
               prefix={<FireOutlined />}
               valueStyle={{ color: '#d48806' }}
@@ -112,14 +122,14 @@ const WorkPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Main Heatmap Row (History) */}
+      {/* Main Heatmap Row (History - always shows all years) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
           <WorkHeatmap data={fullAnalysis.workIntensityHeatmap} height={480} />
         </Col>
       </Row>
 
-      {/* Detailed Analysis Row (Year Specific) */}
+      {/* Detailed Analysis Row (Year Specific or All Time) */}
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12}>
           <LateNightChart data={yearAnalysis.lateDayFrequency.byDayOfWeek} height={350} />
