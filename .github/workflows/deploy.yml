@@ -55,7 +55,8 @@ jobs:
           filters: |
             etl:
               - 'seedfiles/harvest_time_report.xlsx'
-              - 'data/etl/**'
+              - 'data/etl/harvest_to_json.py'
+              - 'data/etl/requirements.txt'
 
       - name: Run ETL
         if: steps.changes.outputs.etl == 'true'
