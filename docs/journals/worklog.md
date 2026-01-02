@@ -619,7 +619,27 @@
 - **Design Saved**: Copied to `/docs/harvest-api-integration-design.md` for session persistence
 
 ### 17:30 - Enhance Playground with Statistic Card showcasing AntPro feature ✅
+
 The Key Stats section now uses StatisticCard.Group which provides a cleaner, more premium card layout with:
+
 - Grouped cards in a row with consistent styling
 - Descriptions under values (e.g., "10 years tracked", "2,847 unique days")
 - Icons as prefixes on key metrics
+
+### 19:00 - Harvest API Integration Implementation ✅
+
+- **Implemented Automated ETL (`harvest_api_sync.py`)**:
+  - Incremental sync: Fetches data starting from last known date
+  - Deduplication: Uses composite key (date+task+hours+start) to prevent duplicates
+  - Reuse: Imports transformation logic directly from `harvest_to_json.py` to ensure data consistency
+  - Robustness: Added exponential backoff for API rate limiting
+- **Implemented GitHub Workflow (`harvest_sync.yml`)**:
+  - Daily schedule: Runs at 09:00 SAST (07:00 UTC)
+  - Secrets integration: Uses `HARVEST_ACCESS_TOKEN` and `HARVEST_ACCOUNT_ID`
+  - Integration: Triggers `deploy.yml` automatically upon successful sync using `workflow_run`
+- **Fixed CI/CD Permission Issue**:
+  - Debugged failure: `remote: Permission denied to github-actions[bot]`
+  - Resolution: Added `permissions: contents: write` to grant bot commit access
+- **Verification**:
+  - Manual workflow run successful
+  - Confirmed data fetch and commit back to repository
