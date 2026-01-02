@@ -132,8 +132,30 @@ const AllTimePage: React.FC = () => {
   
   // 4. All Time Coverage (approx)
   // Use displayedYears (completed years only)
+  // SPECIAL HANDLING: 2016 is a partial year (started mid-year).
+  // We should calculate the target based on the FIRST logged entry in 2016.
+  const calculateYearTarget = (year: number) => {
+    const daysInYear = isLeapYear(year) ? 366 : 365;
+    
+    // Exception for 2016 (Partial Year)
+    if (year === 2016) {
+       const entriesIn2016 = entries.filter(e => e.year === 2016);
+       if (entriesIn2016.length > 0) {
+          // Find first date
+          const dates = entriesIn2016.map(e => e.date).sort();
+          // Assuming date format YYYY-MM-DD, lexicographical sort works
+          const firstDate = new Date(dates[0]);
+          const lastDate = new Date('2016-12-31');
+          const diffTime = Math.abs(lastDate.getTime() - firstDate.getTime());
+          const daysActive = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          return daysActive * 24;
+       }
+    }
+    return daysInYear * 24;
+  };
+
   const totalTargetHours = displayedYears.reduce((sum, year) => {
-    return sum + (isLeapYear(year) ? 8784 : 8760);
+    return sum + calculateYearTarget(year);
   }, 0);
   
   // Accuracy color
@@ -220,8 +242,23 @@ const AllTimePage: React.FC = () => {
   }
 
   // Calculate Total Benchmark (for Total Hours card)
-  // Use sum of displayedYears * activeBenchmark
-  const totalBenchmarkHours = activeBenchmark ? displayedYears.length * activeBenchmark : 0;
+  // Use sum of displayedYears. Handle 2016 Partial Exception.
+  const totalBenchmarkHours = displayedYears.reduce((sum, year) => {
+    if (!activeBenchmark) return 0;
+    
+    let yearBenchmark = activeBenchmark;
+    
+    // Adjust for 2016 if it's in the displayed years
+    if (year === 2016) {
+        // Calculate factor based on days active / total days
+        const target2016 = calculateYearTarget(2016);
+        const full2016 = isLeapYear(2016) ? 8784 : 8760;
+        const fraction = target2016 / full2016;
+        yearBenchmark = activeBenchmark * fraction;
+    }
+    
+    return sum + yearBenchmark;
+  }, 0);
   
   // Calculate Tracking/Performance %
   const performancePct = (activeBenchmark && totalHours > 0) ? (totalHours / totalBenchmarkHours) * 100 : 0;
@@ -268,7 +305,10 @@ const AllTimePage: React.FC = () => {
               <>
                 <Divider style={{ margin: '12px 0' }} />
                 <Text type="secondary">
-                  {performancePct.toFixed(1)}% of {benchmarkLabel}
+                  {selectedPersona === 'ALL' 
+                    ? `Includes sleep (${(totalHours / totalTargetHours * 100).toFixed(1)}% tracked)`
+                    : `${performancePct.toFixed(1)}% of ${benchmarkLabel}`
+                  }
                 </Text>
               </>
             )}
@@ -367,7 +407,7 @@ const AllTimePage: React.FC = () => {
               }}
               tooltip={{
                 formatter: (datum: { year: string; hours: number }) => ({
-                  name: datum.year,
+                  name: 'Total Hours',
                   value: `${(datum.hours / 1000).toFixed(1)}k hrs`,
                 }),
               }}
