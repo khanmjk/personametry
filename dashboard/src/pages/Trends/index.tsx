@@ -259,18 +259,20 @@ const TrendsPage: React.FC = () => {
         )}
       </Row>
 
-      {/* Row 2: Total Hours by Year & Persona */}
-      <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
-        <Col xs={24}>
-           {/* Reusing the robust component for consistency */}
-           <YearlyStackedBar 
-              entries={entries} 
-              title="Total Hours by Year & Persona" 
-              height={420} 
-              variant="grouped" 
-            />
-        </Col>
-      </Row>
+      {/* Row 2: Total Hours by Year & Persona - Only for All Time */}
+      {isAllTime && (
+        <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
+          <Col xs={24}>
+            {/* Reusing the robust component for consistency */}
+            <YearlyStackedBar 
+                entries={entries} 
+                title="Total Hours by Year & Persona" 
+                height={420} 
+                variant="grouped" 
+              />
+          </Col>
+        </Row>
+      )}
     </PageContainer>
   );
 };

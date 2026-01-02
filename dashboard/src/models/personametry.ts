@@ -175,7 +175,7 @@ export const PERSONA_SHORT_NAMES: Record<string, string> = {
   'P0 Life Constraints (Sleep)': 'Sleep',
   'P1 Muslim': 'Muslim',
   'P2 Individual': 'Individual',
-  'P3 Professional': 'Professional',
+  'P3 Professional': 'Work',
   'P4 Husband': 'Husband',
   'P5 Family': 'Family',
   'P6 Friend Social': 'Social',
