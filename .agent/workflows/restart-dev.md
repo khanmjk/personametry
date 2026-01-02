@@ -26,6 +26,12 @@ sleep 2
 cd /Users/khanmjk/Documents/GitHub/personametry/dashboard && rm -rf node_modules/.cache .umi dist 2>/dev/null || true
 ```
 
+// turbo 4. Ensure fresh data is synchronized:
+
+```bash
+cp /Users/khanmjk/Documents/GitHub/personametry/data/processed/timeentries_harvest.json /Users/khanmjk/Documents/GitHub/personametry/dashboard/public/data/
+```
+
 // turbo 4. Start the dev server:
 
 ```bash
