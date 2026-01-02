@@ -643,3 +643,14 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Verification**:
   - Manual workflow run successful
   - Confirmed data fetch and commit back to repository
+- **Data Integrity & Workflow Coexistence Fix**:
+  - **Issue**: Deploy workflow was unconditionally running legacy manual ETL, overwriting fresh API data with stale Excel data.
+  - **Resolution**: Implemented `dorny/paths-filter` in `deploy.yml`.
+  - **Outcome**: Legacy ETL now _only_ runs if `seedfiles/harvest_time_report.xlsx` or `data/etl/**` are modified. This guarantees safe coexistence of Automated API Sync and Manual Excel workflows.
+  - **Logging**: Enhanced `harvest_api_sync.py` with verbose deduplication logs for audit trail.
+- **Fixed Retroactive Data Sync**:
+  - **Issue**: Incremental sync was strictly using `last_date` (today), missing late entries logged for previous days.
+  - **Resolution**: Implemented safe lookback window. Initially 30 days, optimized to **7 days** to respect API rate limits (uses ~1% quota) while capturing weekly retroactive updates.
+- **Fixed CI Trigger Collision**:
+  - **Issue**: `deploy.yml` filter `data/etl/**` was too broad. Modifying the _automation_ script triggered the _legacy_ ETL, wiping the new data.
+  - **Resolution**: Refined `paths-filter` to explicitly list `harvest_to_json.py` and `requirements.txt`. Automation script changes now correctly bypass legacy ETL.
