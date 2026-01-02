@@ -49,6 +49,7 @@ jobs:
           pip install -r data/etl/requirements.txt
 
       - name: Run ETL
+        if: github.event_name != 'workflow_run'
         run: |
           cd data/etl
           python harvest_to_json.py
