@@ -447,3 +447,69 @@
 - **Chart Logic Investigation**:
   - **YoY Trend (All Time)**: Confirmed it compares "Last 12 recorded months" vs "Previous 12 recorded months".
   - **YoY Trend (Specific Year)**: Confirmed it compares "Selected Year" vs "Previous Year".
+
+---
+
+## 2026-01-02 (Day 4)
+
+### 08:00 - All Time Page Enhancements ✅
+
+- **New KPI Cards**:
+
+  - Added "Total Hours" card with sleep inclusion note (e.g., "Includes sleep (100.1% tracked)")
+  - Added "Time Entries" card showing entry count
+  - Added "Avg. Hours/Year" card with year count context
+  - Added "Tracking Quality" card showing data completeness percentage
+
+- **2016 Partial Year Handling**:
+
+  - **Issue**: 2016 data only starts in July (partial year) causing misleading averages
+  - **Solution**: Added smart detection for partial first year
+  - **Implementation**: Calculates expected hours based on actual tracked months, not full year
+  - **Visual**: "Tracking Quality" card shows percentage with year range subtitle
+
+- **Annual Hours Trend Chart**:
+
+  - Line chart showing year-over-year total hours
+  - Point markers at each data point
+  - Y-axis labeled "Total Hours"
+  - G2 v5 compliant tooltip (see Line Chart Tooltip Fix below)
+
+- **Sleep Data Benchmark Cards**:
+  - Added "Sleep vs Work Benchmark" card comparing persona distributions
+  - Displays Work/Life/Sleep breakdown percentages
+  - Uses RAG coloring for healthy balance indicators
+
+### 16:38 - Line Chart Tooltip Fix (Annual Hours Trend) ✅
+
+- **Issue**: Line chart tooltip on "Annual Hours Trend" (All Time page) showed "Year + Year" instead of "Year + Value". The value field was empty.
+- **Root Cause**: Used deprecated G2 v4 `formatter` API which was being ignored by @ant-design/charts v2.6.7 (G2 v5).
+- **Failed Attempts**:
+  - `tooltip.formatter` - value field ignored
+  - `tooltip.customContent` - entire function ignored
+  - `seriesField` + formatter - label appeared but value still empty
+  - Various fallback patterns for accessing `items[0].data.hours` - all failed
+- **Solution**: Same pattern as Pie Chart fix - use G2 v5 `title` and `items` callbacks:
+  - **Before (deprecated)**:
+    ```tsx
+    tooltip={{ formatter: (datum) => ({ name: 'Total Hours', value: 'X hrs' }) }}
+    ```
+  - **After (G2 v5 compatible)**:
+    ```tsx
+    tooltip={{
+      title: (datum) => datum.year,
+      items: [(datum) => ({ name: 'Total Hours', value: `${(datum.hours / 1000).toFixed(1)}k hrs` })]
+    }}
+    ```
+- **File Modified**: `AllTime/index.tsx` - Annual Hours Trend Line chart
+- **Verification**: User confirmed tooltip now shows "2018 → Total Hours: 8.8k hrs" correctly.
+- **Key Learning**: G2 v5 tooltip API is consistent across ALL chart types (Pie, Line, Column, etc.) - always use `title` + `items` callbacks.
+
+### 16:41 - Documentation Updates ✅
+
+- **Agent Coding Contract**:
+  - Added **Section 5.5: G2 v5 Tooltip API (CRITICAL)** documenting the mandatory tooltip pattern
+  - Includes deprecated vs required API comparison table
+  - Lists common symptoms of using deprecated API
+  - Documents the `title` + `items` pattern as the ONLY reliable approach
+- **Worklog**: Updated with comprehensive Day 4 accomplishments

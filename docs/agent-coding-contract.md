@@ -177,7 +177,42 @@ const CARD_STYLE = {
 
 ```
 
-### 5.5 Data Source Standardization
+### 5.5 G2 v5 Tooltip API (CRITICAL)
+
+**MANDATORY**: The @ant-design/charts v2.x library uses **G2Plot v5** internally. The v4 tooltip API is **deprecated and silently ignored**.
+
+| API Version            | Pattern                                                                  | Status     |
+| ---------------------- | ------------------------------------------------------------------------ | ---------- |
+| **G2 v4 (DEPRECATED)** | `tooltip={{ formatter: (datum) => ({ name, value }) }}`                  | ❌ IGNORED |
+| **G2 v5 (REQUIRED)**   | `tooltip={{ title: (d) => d.field, items: [(d) => ({ name, value })] }}` | ✅ WORKS   |
+
+**Correct Pattern (All Chart Types)**:
+
+```tsx
+tooltip={{
+  title: (datum) => datum.xField,  // Title shown at top of tooltip
+  items: [(datum) => ({
+    name: 'Label',
+    value: `${datum.yField.toLocaleString()} hrs`,
+  })],
+}}
+```
+
+**Common Symptoms of Using Deprecated API**:
+
+- Tooltip shows correct title but **empty value**
+- Tooltip shows field name twice (e.g., "2018 → 2018")
+- `customContent` function is **completely ignored**
+- `formatter` callback is never invoked
+
+**Rules**:
+
+1. ALWAYS use `title` + `items` callbacks for tooltip configuration
+2. NEVER use `formatter` - it is deprecated in G2 v5
+3. NEVER use `customContent` - it is unreliable in this version
+4. This pattern applies to ALL chart types: Pie, Line, Column, Bar, etc.
+
+### 5.6 Data Source Standardization
 
 **MANDATORY**: All pages that load data MUST follow this pattern:
 

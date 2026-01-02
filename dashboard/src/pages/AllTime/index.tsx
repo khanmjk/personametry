@@ -400,16 +400,18 @@ const AllTimePage: React.FC = () => {
               color="#0D7377"
               point={{ size: 6, shape: 'circle', style: { fill: '#0D7377' } }}
               label={false}
+              legend={false} 
               xAxis={{ label: { style: { fontSize: 12, fontWeight: 500 } } }}
               yAxis={{
                 title: { text: 'Total Hours', style: { fontSize: 12 } },
                 grid: { line: { style: { stroke: '#f0f0f0' } } },
               }}
               tooltip={{
-                formatter: (datum: { year: string; hours: number }) => ({
+                title: (datum: { year: string }) => datum.year,
+                items: [(datum: { year: string; hours: number }) => ({
                   name: 'Total Hours',
                   value: `${(datum.hours / 1000).toFixed(1)}k hrs`,
-                }),
+                })],
               }}
             />
           </ProCard>
