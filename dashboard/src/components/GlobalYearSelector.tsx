@@ -8,11 +8,14 @@
 import React, { useEffect } from 'react';
 import { Select, Space, Tag } from 'antd';
 import { CalendarOutlined, GlobalOutlined } from '@ant-design/icons';
+import { useLocation } from '@umijs/max';
 import { useYear, YearSelection } from '@/contexts/YearContext';
 import { loadTimeEntries, getAvailableYears, getDataSource } from '@/services/personametryService';
 
 const GlobalYearSelector: React.FC = () => {
   const { selectedYear, setSelectedYear, availableYears, setAvailableYears, isAllTime } = useYear();
+  const location = useLocation();
+  const isAllTimePage = location.pathname === '/alltime';
 
   // Load available years on mount
   useEffect(() => {
@@ -35,6 +38,7 @@ const GlobalYearSelector: React.FC = () => {
     ...availableYears.map((year) => ({
       label: year.toString(),
       value: year as YearSelection,
+      disabled: isAllTimePage, // Disable specific years on All Time page
     })),
   ];
 

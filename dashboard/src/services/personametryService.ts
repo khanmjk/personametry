@@ -646,6 +646,7 @@ const ACTIVITY_COLORS: Record<string, string> = {
   'Learning': '#1890ff',
   'Hobbies & Creative': '#722ed1',
   'Spiritual': '#faad14',
+  'Social': '#eb2f96',
 };
 
 /**
@@ -657,11 +658,15 @@ export function calculateIndividualPatterns(
   year?: number
 ): IndividualAnalysis {
   // Filter for Individual persona (P2) + Spiritual (P1 Muslim)
+  // Filter for Individual persona (P2) + Spiritual (P1 Muslim) + Social (P4)
   const INDIVIDUAL_PERSONA = 'P2 Individual';
   const SPIRITUAL_PERSONA = 'P1 Muslim';
+  const SOCIAL_PERSONA = 'P6 Friend Social';
   
   let individualEntries = entries.filter(
-    e => e.prioritisedPersona === INDIVIDUAL_PERSONA || e.prioritisedPersona === SPIRITUAL_PERSONA
+    e => e.prioritisedPersona === INDIVIDUAL_PERSONA || 
+         e.prioritisedPersona === SPIRITUAL_PERSONA ||
+         e.prioritisedPersona === SOCIAL_PERSONA
   );
   
   if (year) {
@@ -674,7 +679,11 @@ export function calculateIndividualPatterns(
   // Activity breakdown by category
   const categoryHours: Record<string, number> = {};
   for (const entry of individualEntries) {
-    const category = INDIVIDUAL_ACTIVITY_CATEGORIES[entry.normalisedTask] || 'Other';
+    let category = INDIVIDUAL_ACTIVITY_CATEGORIES[entry.normalisedTask];
+    if (entry.prioritisedPersona === 'P6 Friend Social') {
+      category = 'Social';
+    }
+    category = category || 'Other';
     categoryHours[category] = (categoryHours[category] || 0) + entry.hours;
   }
 

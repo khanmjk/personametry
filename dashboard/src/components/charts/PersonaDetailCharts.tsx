@@ -10,10 +10,11 @@
 
 import React from 'react';
 import { Column } from '@ant-design/charts';
-import { Row, Col, Typography, Card, Empty } from 'antd';
+import { Row, Col, Typography, Card, Empty, Tag, Space } from 'antd';
 import { ProCard } from '@ant-design/pro-components';
 import { 
   YEAR_COLORS, 
+  PERSONA_COLORS,
   PERSONA_SHORT_NAMES, 
   type TimeEntry 
 } from '@/models/personametry';
@@ -127,7 +128,12 @@ const PersonaDetailCharts: React.FC<PersonaDetailChartsProps> = ({
       {/* 1. WEEKLY CHART (Professional Only) */}
       {isProfessional && (
         <ProCard 
-          title="Weekly Comparison (3 Years)" 
+          title={
+            <Space>
+              <Tag color={PERSONA_COLORS[persona] || '#888'}>{shortName}</Tag>
+              <span>Weekly Comparison (3 Years)</span>
+            </Space>
+          } 
           style={CARD_STYLE}
           tooltip="Comparison of work intensity by week number across 3 years"
         >
@@ -153,7 +159,12 @@ const PersonaDetailCharts: React.FC<PersonaDetailChartsProps> = ({
         {/* 2. MONTHLY CHART */}
         <Col xs={24} lg={16}>
           <ProCard 
-            title={isProfessional ? "Monthly Comparison (3 Years)" : "Monthly Comparison (2 Years)"}
+            title={
+              <Space>
+                <Tag color={PERSONA_COLORS[persona] || '#888'}>{shortName}</Tag>
+                <span>{isProfessional ? "Monthly Comparison (3 Years)" : "Monthly Comparison (2 Years)"}</span>
+              </Space>
+            }
             style={{ ...CARD_STYLE, height: 400 }}
           >
               <Column 
@@ -180,7 +191,12 @@ const PersonaDetailCharts: React.FC<PersonaDetailChartsProps> = ({
         {/* 3. ANNUAL SUMMARY */}
         <Col xs={24} lg={8}>
           <ProCard 
-            title="Full Year Summary" 
+            title={
+              <Space>
+                <Tag color={PERSONA_COLORS[persona] || '#888'}>{shortName}</Tag>
+                <span>Full Year Summary</span>
+              </Space>
+            } 
             style={{ ...CARD_STYLE, height: 400 }}
           >
              <Column 

@@ -405,3 +405,45 @@
   - Legend moved from bottom-right to top-right (Card extra)
 - **Visual Distinction**: Yellow glow (`boxShadow: 0 0 8px 2px #fadb14`) makes break months pop
 - **Commits**: `737299f` (initial), `c935ce7` (refined to green fill + legend reposition)
+
+### 07:00 - Global Year Selector & UI Consistency (Day 3 Begins)
+
+- **Global Year Selector**:
+
+  - **Problem**: Each page (Dashboard, Work, Individual, Sleep) had its own local year filter, causing disjointed navigation.
+  - **Solution**: Implemented `YearContext` provider in `app.tsx`.
+  - **UI**: Added a Global Year Selector (Dropdown) to the top navigation bar (Header).
+  - **Logic**: State is now hoisted to Recoil/Context. Changing year updates ALL pages instantly.
+  - **Pages Connected**: `Personametry`, `Work`, `Individual`, `Sleep`, `Trends`, `GainsLosses`, `Personas`.
+  - **Cleanup**: Removed local `YearSelector` components from individual pages.
+
+- **"All Time" Mode**:
+
+  - **Feature**: Added "All Time" options to the global selector.
+  - **Adaptation**:
+    - **Dashboard**: Wheel of Life adapts to show 5-year trend instead of simple overlay. YoY Comparison grid is hidden.
+    - **Trends**: Top chart shows full history. YoY Trend chart is hidden.
+    - **Sleep**: Monthly chart converts to "Average Monthly Sleep (All Years)".
+    - **Individual**: YoY Trend card hidden. Layout expands to 3 cards.
+
+- **UI Polish & Consistency**:
+
+  - **Persona Pills**: Added colored persona tags (Pills) to chart titles on Personas page for visual context.
+  - **Titles**: Renamed "Individual - Self Investment" to "Individual - Self Care".
+  - **Subtitles**: Updated Individual page subtitle to "Health, Learning, Hobbies, Spiritual & Social".
+  - **Footer**: Updated Total Me Time footer to "Incl. Spiritual + Social...".
+  - **Mobile Fix**: Fixed chart container overflows and legend wrapping.
+
+- **Data Integration (Social Persona)**:
+
+  - **Objective**: Include "Social" (P6) activities within the "Self Care" definition on the Individual page.
+  - **Implementation**:
+    - Updated `calculateIndividualPatterns` to include `P6 Friend Social`.
+    - Added "Social" category (Pink) to Activity Distribution charts.
+    - Updated "Weekly Self-Care Score" to count Social hours towards Thriving status.
+    - **Bug Fix**: Fixed regression where "Specific Year" YoY calculation ignored Social data.
+  - **Verification**: Confirmed 2025 data shows ~75hrs Social, contributing to ~2.0k total Me Time hours.
+
+- **Chart Logic Investigation**:
+  - **YoY Trend (All Time)**: Confirmed it compares "Last 12 recorded months" vs "Previous 12 recorded months".
+  - **YoY Trend (Specific Year)**: Confirmed it compares "Selected Year" vs "Previous Year".

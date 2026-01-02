@@ -116,8 +116,12 @@ const IndividualPage: React.FC = () => {
       // For specific year, compare to previous year
       const INDIVIDUAL_PERSONA = 'P2 Individual';
       const SPIRITUAL_PERSONA = 'P1 Muslim';
+      const SOCIAL_PERSONA = 'P6 Friend Social';
+      
       const individualEntries = entries.filter(
-        e => e.prioritisedPersona === INDIVIDUAL_PERSONA || e.prioritisedPersona === SPIRITUAL_PERSONA
+        e => e.prioritisedPersona === INDIVIDUAL_PERSONA || 
+             e.prioritisedPersona === SPIRITUAL_PERSONA ||
+             e.prioritisedPersona === SOCIAL_PERSONA
       );
       
       const currentYearHours = individualEntries
@@ -240,16 +244,16 @@ const IndividualPage: React.FC = () => {
         title: (
           <span style={{ fontSize: 24, fontWeight: 600, color: '#333' }}>
             <HeartOutlined style={{ marginRight: 8, color: '#722ed1' }} />
-            Individual • Self Investment
+            Individual • Self Care
             {isAllTime && <Tag color="#0D7377" icon={<GlobalOutlined />} style={{ marginLeft: 12 }}>All Time</Tag>}
           </span>
         ),
-        subTitle: 'Health, Learning, Hobbies & Spiritual',
+        subTitle: 'Health, Learning, Hobbies, Spiritual & Social',
       }}
     >
       {/* KPI Row */}
       <Row gutter={[20, 20]}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={isAllTime ? 8 : 6}>
           <ProCard style={CARD_STYLE}>
             <Statistic
               title={<Text strong>Total Me Time</Text>}
@@ -259,10 +263,10 @@ const IndividualPage: React.FC = () => {
               prefix={<ClockCircleOutlined />}
             />
             <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">Incl. Spiritual</Text>
+            <Text type="secondary">Incl. Spiritual + Social for a more holistic view of self-care streams</Text>
           </ProCard>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={isAllTime ? 8 : 6}>
           <ProCard style={CARD_STYLE}>
             <Statistic
               title={<Text strong>Avg. Weekly</Text>}
@@ -282,7 +286,7 @@ const IndividualPage: React.FC = () => {
             </Text>
           </ProCard>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={isAllTime ? 8 : 6}>
           <ProCard style={CARD_STYLE}>
             <Statistic
               title={<Text strong>Fitness Consistency</Text>}
@@ -295,25 +299,27 @@ const IndividualPage: React.FC = () => {
             <Text type="secondary">Weeks with 3+ day streaks</Text>
           </ProCard>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <ProCard style={CARD_STYLE}>
-            <Statistic
-              title={<Text strong>YoY Trend</Text>}
-              value={yoyTrend.delta >= 0 ? `+${formatHours(yoyTrend.delta)}` : formatHours(yoyTrend.delta)}
-              suffix="hrs"
-              valueStyle={{ 
-                color: yoyTrend.delta >= 0 ? '#52c41a' : '#f5222d', 
-                fontSize: 28, 
-                fontWeight: 600 
-              }}
-              prefix={yoyTrend.delta >= 0 ? <RiseOutlined /> : <FallOutlined />}
-            />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text style={{ color: yoyTrend.percent >= 0 ? '#52c41a' : '#f5222d' }}>
-              {yoyTrend.percent >= 0 ? '+' : ''}{yoyTrend.percent}%
-            </Text>
-          </ProCard>
-        </Col>
+        {!isAllTime && (
+          <Col xs={24} sm={12} md={6}>
+            <ProCard style={CARD_STYLE}>
+              <Statistic
+                title={<Text strong>YoY Trend</Text>}
+                value={yoyTrend.delta >= 0 ? `+${formatHours(yoyTrend.delta)}` : formatHours(yoyTrend.delta)}
+                suffix="hrs"
+                valueStyle={{ 
+                  color: yoyTrend.delta >= 0 ? '#52c41a' : '#f5222d', 
+                  fontSize: 28, 
+                  fontWeight: 600 
+                }}
+                prefix={yoyTrend.delta >= 0 ? <RiseOutlined /> : <FallOutlined />}
+              />
+              <Divider style={{ margin: '12px 0' }} />
+              <Text style={{ color: yoyTrend.percent >= 0 ? '#52c41a' : '#f5222d' }}>
+                {yoyTrend.percent >= 0 ? '+' : ''}{yoyTrend.percent}%
+              </Text>
+            </ProCard>
+          </Col>
+        )}
       </Row>
 
       {/* Charts Row */}
@@ -394,7 +400,7 @@ const IndividualPage: React.FC = () => {
         </Col>
         <Col xs={24} lg={14}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Self-Investment Trend (Monthly)</Title>}
+            title={<Title level={5} style={{ margin: 0 }}>Self-Care Trend (Monthly)</Title>}
             style={{ ...CARD_STYLE, height: 420 }}
           >
             <Line {...lineConfig} />

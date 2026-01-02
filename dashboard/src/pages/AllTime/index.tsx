@@ -61,32 +61,38 @@ const AllTimePage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Exclude sleep from all metrics
-  const entriesExcludingSleep = entries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
+  // Filter out current incomplete year (e.g., 2026) for "All Time" analysis
+  // This ensures metrics reflect "Complete Years" only
+  const currentYear = new Date().getFullYear();
+  const displayedYears = availableYears.filter(y => y < currentYear);
+  const displayedEntries = entries.filter(e => e.year < currentYear);
+
+  // Include all metrics (Sleep included)
+  // const entriesExcludingSleep = entries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
   
   // Get unique personas for dropdown
-  const uniquePersonas = [...new Set(entriesExcludingSleep.map(e => e.prioritisedPersona))].sort();
+  const uniquePersonas = [...new Set(displayedEntries.map(e => e.prioritisedPersona))].sort();
   
   // Apply persona filter
   const filteredEntries = selectedPersona === 'ALL' 
-    ? entriesExcludingSleep 
-    : entriesExcludingSleep.filter(e => e.prioritisedPersona === selectedPersona);
+    ? displayedEntries 
+    : displayedEntries.filter(e => e.prioritisedPersona === selectedPersona);
   
   // Total metrics (use filtered data)
   const totalHours = sumHours(filteredEntries);
   const totalEntries = filteredEntries.length;
-  const yearCount = availableYears.length;
+  const yearCount = displayedYears.length;
   const avgPerYear = totalHours / yearCount;
 
-  // Persona breakdown across all years (still show all personas for context when filtering)
+  // Persona breakdown across all years (still show all for context)
   const personaSummaries = selectedPersona === 'ALL' 
-    ? groupByPersona(entriesExcludingSleep)
+    ? groupByPersona(displayedEntries) // Use full entries (minus current year)
     : groupByPersona(filteredEntries);
 
 
 
   // Yearly totals for trend line (use filtered data)
-  const yearlyTotals = availableYears.map(year => {
+  const yearlyTotals = displayedYears.map(year => {
     const yearData = filterByYear(filteredEntries, year);
     return {
       year: year.toString(),
@@ -104,6 +110,38 @@ const AllTimePage: React.FC = () => {
     return { delta, percent };
   };
   const growth = calculateGrowth();
+
+  // Tracking Quality Analysis
+  // 1. Calculate Theoretical Max (365.25 days * 24h = 8766h/yr approx, or 8760 for non-leap)
+  const HOURS_PER_YEAR = 8760;
+  
+  // 2. Identified Latest Complete Year
+  // displayedYears is already filtered to exclude current year.
+  // So displayedYears[0] is the latest complete year (e.g. 2025).
+  const latestCompleteYear = displayedYears.length > 0 ? displayedYears[0] : 0;
+  const latestCompleteYearData = yearlyTotals.find(y => y.year === latestCompleteYear.toString());
+  
+  // 3. Calculate Accuracy for that year
+  // Determine if leap year
+  const isLeapYear = (year: number) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  const targetHours = isLeapYear(latestCompleteYear) ? 8784 : 8760;
+  const recordedHours = latestCompleteYearData ? latestCompleteYearData.hours : 0;
+  
+  const missingHours = targetHours - recordedHours;
+  const accuracyPct = targetHours > 0 ? (recordedHours / targetHours) * 100 : 0;
+  
+  // 4. All Time Coverage (approx)
+  // Use displayedYears (completed years only)
+  const totalTargetHours = displayedYears.reduce((sum, year) => {
+    return sum + (isLeapYear(year) ? 8784 : 8760);
+  }, 0);
+  
+  // Accuracy color
+  const getAccuracyColor = (pct: number) => {
+    if (pct >= 99) return STATUS_COLORS.success;
+    if (pct >= 95) return STATUS_COLORS.warning;
+    return STATUS_COLORS.error;
+  };
 
   // Table columns
   const columns = [
@@ -160,6 +198,34 @@ const AllTimePage: React.FC = () => {
     );
   }
 
+  // Benchmark Constants
+  const WORK_PERSONA = 'P3 Professional';
+  const SLEEP_PERSONA = 'P0 Life Constraints (Sleep)';
+  const WORK_BENCHMARK_SA = 2340; // 45h/week * 52
+  const SLEEP_BENCHMARK = 2920;   // 8h/day * 365
+  
+  // Determine active benchmark
+  let activeBenchmark = null;
+  let benchmarkLabel = '';
+  
+  if (selectedPersona === 'ALL') {
+    activeBenchmark = HOURS_PER_YEAR; // 8760
+    benchmarkLabel = 'Theoretical Max';
+  } else if (selectedPersona === WORK_PERSONA) {
+    activeBenchmark = WORK_BENCHMARK_SA;
+    benchmarkLabel = 'SA Standard (45h/wk)';
+  } else if (selectedPersona === SLEEP_PERSONA) {
+    activeBenchmark = SLEEP_BENCHMARK;
+    benchmarkLabel = 'Recommended (8h/day)';
+  }
+
+  // Calculate Total Benchmark (for Total Hours card)
+  // Use sum of displayedYears * activeBenchmark
+  const totalBenchmarkHours = activeBenchmark ? displayedYears.length * activeBenchmark : 0;
+  
+  // Calculate Tracking/Performance %
+  const performancePct = (activeBenchmark && totalHours > 0) ? (totalHours / totalBenchmarkHours) * 100 : 0;
+
   return (
     <PageContainer
       header={{
@@ -169,7 +235,7 @@ const AllTimePage: React.FC = () => {
             All Time • {yearCount} Years
           </span>
         ),
-        subTitle: `${availableYears[availableYears.length - 1]} - ${availableYears[0]}`,
+        subTitle: displayedYears.length > 0 ? `${displayedYears[displayedYears.length - 1]} - ${displayedYears[0]}` : '',
         extra: [
           <Select
             key="persona-filter"
@@ -198,8 +264,14 @@ const AllTimePage: React.FC = () => {
               valueStyle={{ color: '#0D7377', fontSize: 28, fontWeight: 600 }}
               prefix={<ClockCircleOutlined />}
             />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">Excludes sleep</Text>
+            {activeBenchmark && (
+              <>
+                <Divider style={{ margin: '12px 0' }} />
+                <Text type="secondary">
+                  {performancePct.toFixed(1)}% of {benchmarkLabel}
+                </Text>
+              </>
+            )}
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
@@ -221,27 +293,54 @@ const AllTimePage: React.FC = () => {
               suffix="hrs"
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
             />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text type="secondary">Per year average</Text>
+            {activeBenchmark && (
+              <>
+                <Divider style={{ margin: '12px 0' }} />
+                <Text type="secondary">
+                  vs {formatHours(activeBenchmark)} hrs ({benchmarkLabel})
+                </Text>
+              </>
+            )}
           </ProCard>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <ProCard style={CARD_STYLE}>
-            <Statistic
-              title={<Text strong>Latest YoY Change</Text>}
-              value={growth.delta >= 0 ? `+${formatHours(growth.delta)}` : formatHours(growth.delta)}
-              suffix="hrs"
-              valueStyle={{ 
-                color: growth.delta >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error, 
-                fontSize: 28, 
-                fontWeight: 600 
-              }}
-              prefix={growth.delta >= 0 ? <RiseOutlined /> : <FallOutlined />}
-            />
-            <Divider style={{ margin: '12px 0' }} />
-            <Text style={{ color: growth.percent >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error }}>
-              {growth.percent >= 0 ? '+' : ''}{growth.percent}%
-            </Text>
+            {selectedPersona === 'ALL' ? (
+              <>
+                <Statistic
+                  title={<Text strong>Tracking Quality ({latestCompleteYear})</Text>}
+                  value={`${accuracyPct.toFixed(2)}%`}
+                  valueStyle={{ 
+                    color: getAccuracyColor(accuracyPct), 
+                    fontSize: 28, 
+                    fontWeight: 600 
+                  }}
+                  prefix={<TrophyOutlined />}
+                />
+                <Divider style={{ margin: '12px 0' }} />
+                <Text type="secondary">
+                  Variance: {missingHours > 0 ? '-' : '+'}{formatHours(Math.abs(missingHours))} hrs
+                </Text>
+              </>
+            ) : (
+              <>
+                <Statistic
+                  title={<Text strong>Latest YoY Change</Text>}
+                  value={growth.delta >= 0 ? `+${formatHours(growth.delta)}` : formatHours(growth.delta)}
+                  suffix="hrs"
+                  valueStyle={{ 
+                    color: growth.delta >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error, 
+                    fontSize: 28, 
+                    fontWeight: 600 
+                  }}
+                  prefix={growth.delta >= 0 ? <RiseOutlined /> : <FallOutlined />}
+                />
+                <Divider style={{ margin: '12px 0' }} />
+                <Text style={{ color: growth.percent >= 0 ? STATUS_COLORS.success : STATUS_COLORS.error }}>
+                  {growth.percent >= 0 ? '+' : ''}{growth.percent}%
+                </Text>
+              </>
+            )}
           </ProCard>
         </Col>
       </Row>
@@ -250,7 +349,7 @@ const AllTimePage: React.FC = () => {
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
         <Col xs={24}>
           <ProCard
-            title={<Title level={5} style={{ margin: 0 }}>Annual Hours Trend (Excl. Sleep)</Title>}
+            title={<Title level={5} style={{ margin: 0 }}>Annual Hours Trend</Title>}
             style={{ ...CARD_STYLE, height: 360 }}
           >
             <Line
