@@ -610,3 +610,16 @@
   - Add GitHub repository secrets
   - Review implementation plan before coding
 - **Artifact**: Created `implementation_plan.md` with full system design
+- **Plan Refinement** (per user feedback):
+  - Changed schedule: Daily 09:00 SAST (was weekly)
+  - Added exponential backoff retry mechanism
+  - Added composite key deduplication for overlap handling
+  - Added email notifications on success/failure
+  - Preserved manual Excel export as failsafe
+- **Design Saved**: Copied to `/docs/harvest-api-integration-design.md` for session persistence
+
+### 17:30 - Enhance Playground with Statistic Card showcasing AntPro feature ✅
+The Key Stats section now uses StatisticCard.Group which provides a cleaner, more premium card layout with:
+- Grouped cards in a row with consistent styling
+- Descriptions under values (e.g., "10 years tracked", "2,847 unique days")
+- Icons as prefixes on key metrics

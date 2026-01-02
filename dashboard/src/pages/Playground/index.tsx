@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { PageContainer, ProCard, ProTable, QueryFilter, ProFormSelect, ProFormDateRangePicker } from '@ant-design/pro-components';
+import { PageContainer, ProCard, ProTable, QueryFilter, ProFormSelect, ProFormDateRangePicker, StatisticCard } from '@ant-design/pro-components';
 import { Row, Col, Spin, Alert, Statistic, Typography, Switch, Select, Radio, Space, Divider, Tag, Tooltip } from 'antd';
 import { Column, Line, Pie } from '@ant-design/charts';
 import {
@@ -245,6 +245,28 @@ const PlaygroundPage: React.FC = () => {
     }
   }, [filteredEntries, groupBy]);
 
+  // Sparkline data: hours per year
+  const yearlyHoursTrend = useMemo(() => {
+    const yearMap = new Map<number, number>();
+    for (const e of entries) {
+      yearMap.set(e.year, (yearMap.get(e.year) || 0) + e.hours);
+    }
+    return [...yearMap.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([year, hours]) => ({ year: year.toString(), value: Math.round(hours) }));
+  }, [entries]);
+
+  // Sparkline data: entries per year
+  const yearlyEntriesTrend = useMemo(() => {
+    const yearMap = new Map<number, number>();
+    for (const e of entries) {
+      yearMap.set(e.year, (yearMap.get(e.year) || 0) + 1);
+    }
+    return [...yearMap.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([year, count]) => ({ year: year.toString(), value: count }));
+  }, [entries]);
+
   // Compare mode chart data (grouped by year)
   const compareChartData = useMemo(() => {
     if (!compareMode || selectedYears.length < 2) return [];
@@ -406,34 +428,73 @@ const PlaygroundPage: React.FC = () => {
         subTitle: 'Explore your data with custom filters and interactive charts',
       }}
     >
-      {/* Section 1: Key Stats */}
+      {/* Section 1: Key Stats with Sparklines */}
       <ProCard title={<Title level={5} style={{ margin: 0 }}><DatabaseOutlined /> Key Statistics</Title>} style={CARD_STYLE}>
-        <Row gutter={[16, 16]}>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Total Entries" value={stats.totalEntries.toLocaleString()} prefix={<DatabaseOutlined />} />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Total Hours" value={formatHours(stats.totalHours)} suffix="hrs" prefix={<ClockCircleOutlined />} />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Date Range" value={`${stats.dateRange.start.slice(0, 4)} - ${stats.dateRange.end.slice(0, 4)}`} prefix={<CalendarOutlined />} />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Days Tracked" value={stats.uniqueDays.toLocaleString()} />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Longest Day" value={`${stats.longestDay.hours.toFixed(1)}h`} prefix={<FireOutlined />} />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Longest Streak" value={`${stats.longestStreak} days`} prefix={<ThunderboltOutlined />} />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Busiest Month" value={stats.busiestMonth.month} prefix={<TrophyOutlined />} />
-          </Col>
-          <Col xs={12} md={6} lg={3}>
-            <Statistic title="Most Sleep" value={stats.mostSleepMonth.month} />
-          </Col>
-        </Row>
+        <StatisticCard.Group>
+          <StatisticCard
+            statistic={{
+              title: 'Total Hours',
+              value: formatHours(stats.totalHours),
+              suffix: 'hrs',
+              description: <Text type="secondary">{yearlyHoursTrend.length} years tracked</Text>,
+            }}
+          />
+          <StatisticCard
+            statistic={{
+              title: 'Total Entries',
+              value: stats.totalEntries.toLocaleString(),
+              description: <Text type="secondary">{stats.uniqueDays.toLocaleString()} unique days</Text>,
+            }}
+          />
+          <StatisticCard
+            statistic={{
+              title: 'Longest Streak',
+              value: stats.longestStreak,
+              suffix: 'days',
+              prefix: <ThunderboltOutlined />,
+            }}
+          />
+          <StatisticCard
+            statistic={{
+              title: 'Longest Day',
+              value: stats.longestDay.hours.toFixed(1),
+              suffix: 'hrs',
+              prefix: <FireOutlined />,
+              description: <Text type="secondary">{stats.longestDay.date}</Text>,
+            }}
+          />
+        </StatisticCard.Group>
+        <StatisticCard.Group style={{ marginTop: 16 }}>
+          <StatisticCard
+            statistic={{
+              title: 'Date Range',
+              value: `${stats.dateRange.start.slice(0, 4)} - ${stats.dateRange.end.slice(0, 4)}`,
+              prefix: <CalendarOutlined />,
+            }}
+          />
+          <StatisticCard
+            statistic={{
+              title: 'Busiest Month',
+              value: stats.busiestMonth.month,
+              prefix: <TrophyOutlined />,
+              description: <Text type="secondary">{formatHours(stats.busiestMonth.hours)} hrs</Text>,
+            }}
+          />
+          <StatisticCard
+            statistic={{
+              title: 'Most Sleep Month',
+              value: stats.mostSleepMonth.month,
+              description: <Text type="secondary">{formatHours(stats.mostSleepMonth.hours)} hrs</Text>,
+            }}
+          />
+          <StatisticCard
+            statistic={{
+              title: 'Avg Hours/Year',
+              value: formatHours(stats.totalHours / yearlyHoursTrend.length),
+              suffix: 'hrs',
+            }}
+          />
+        </StatisticCard.Group>
       </ProCard>
 
       {/* Section 2: Interactive Chart Builder with QueryFilter */}
