@@ -59,7 +59,7 @@ jobs:
               - 'data/etl/requirements.txt'
 
       - name: Run ETL
-        if: steps.changes.outputs.etl == 'true'
+        if: github.event_name != 'workflow_run' && steps.changes.outputs.etl == 'true'
         run: |
           cd data/etl
           python harvest_to_json.py
