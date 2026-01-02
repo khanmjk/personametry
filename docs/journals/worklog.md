@@ -525,3 +525,88 @@
   - ✅ `PersonaTrendLine.tsx` - Multi-persona trend (only had `showMarkers`)
 - **Verification**: Grep search confirms no remaining `formatter.*datum` or `showMarkers: true` patterns
 - **Result**: All Line chart tooltips now use G2 v5 `title` + `items` pattern
+
+### 16:53 - Trends Page Cleanup ✅
+
+- **Issue**: "Total Hours by Year & Persona" chart was shown for all year selections, but only makes sense for "All Time" view
+- **Fix**: Wrapped `YearlyStackedBar` component with `{isAllTime && (...)}` conditional
+- **File Modified**: `Trends/index.tsx`
+- **Behavior**: Chart now hidden when specific year selected, visible only for "All Time"
+
+### 17:00 - UI Terminology: Professional → Work ✅
+
+- **Discussion**: "Professional" label felt too heavy in context of Work-Life balance tracking
+- **Decision**: Changed display label to "Work" for cleaner, more universally understood terminology
+- **Change**: `PERSONA_SHORT_NAMES['P3 Professional']` changed from `'Professional'` → `'Work'`
+- **File Modified**: `models/personametry.ts`
+- **Impact**: Cascades to all chart labels, legends, tables, and tooltips across entire app
+- **Data Unchanged**: Underlying `P3 Professional` persona ID in JSON remains unchanged
+
+### 17:18 - Data Nerds Playground Page ✅
+
+- **Objective**: Create power-user page with interactive data exploration
+- **Features Implemented**:
+  - **Section 1: Key Stats** (8 KPI cards)
+    - Total Entries, Total Hours, Date Range, Days Tracked
+    - Longest Day, Longest Streak, Busiest Month, Most Sleep Month
+  - **Section 2: Interactive Chart Builder**
+    - Multi-select Year filter (checkbox group)
+    - Multi-select Persona filter (dropdown)
+    - Group By selector (Year/Month/Persona/Day of Week)
+    - Chart Type switcher (Bar/Line/Pie)
+    - Dynamic chart rendering reacts to all filter changes
+  - **Section 3: ProTable Data Explorer**
+    - Collapsible (hidden by default)
+    - Privacy-safe columns ONLY
+    - EXCLUDED: `notes`, `notesClean`, `socialEntity`, `socialContext`, `task` (raw)
+    - INCLUDED: `meTimeBreakdown` and all safe fields
+    - Full sorting, filtering, pagination, density toggle
+- **Files Created**:
+  - `Playground/index.tsx` - Main page component
+  - Route added to `config/routes.ts`
+- **Icon**: ExperimentOutlined (purple flask)
+
+### 17:40 - Playground Enhancements ✅
+
+- **QueryFilter**: Replaced checkbox/dropdown mess with Ant Pro QueryFilter component
+  - Cleaner form-based filtering UX
+  - Submit/Reset buttons built-in
+- **Compare Mode**: Added toggle switch to enable multi-year comparison
+  - Grouped bar chart: Years side-by-side per persona
+  - Multi-line chart: Each year as separate colored line
+  - Only enabled when 2+ years selected
+- **Pie Chart Fix**: Disabled for time-series Group By (Year/Month)
+  - Only enabled for categorical data (Persona/Day of Week)
+  - Tooltip explains restriction
+- **ProTable Summary Row**: Added fixed footer row showing total hours
+  - Uses `ProTable.Summary` component
+  - Styled with background color and bold text
+
+### 18:00 - Playground Final Polish ✅
+
+- **Global Year Selector**: Hidden on Playground page (uses its own QueryFilter)
+  - Modified `app.tsx` to detect `/playground` route and return empty actions
+- **ProTable Fixes**:
+  - Fixed Year column showing "2,024" → removed `valueType: 'digit'`
+  - Removed "Me Time" column (sensitive data)
+  - Updated Summary Row colSpan for new column count
+
+### 17:23 - Harvest API Automation Research ✅
+
+- **Objective**: Design secure automated data sync to replace manual Excel export workflow
+- **Research Completed**:
+  - Harvest API v2 authentication: Personal Access Tokens (recommended for individual use)
+  - Time entries endpoint: `GET /v2/time_entries?from=YYYY-MM-DD&to=YYYY-MM-DD`
+  - Rate limits: 100 requests/15 seconds (general), 100 requests/15 minutes (reports)
+  - Free account access: ✅ Confirmed full API access
+  - GitHub Actions secrets security best practices
+- **System Design Documented**:
+  - Weekly cron-based GitHub Action workflow
+  - Incremental sync strategy (only fetch new entries since last sync)
+  - Security: GitHub Secrets for `HARVEST_ACCESS_TOKEN` and `HARVEST_ACCOUNT_ID`
+  - New files: `harvest_sync.yml` (workflow), `harvest_api_sync.py` (ETL script)
+- **User Action Required**:
+  - Generate Personal Access Token from Harvest ID → Developers
+  - Add GitHub repository secrets
+  - Review implementation plan before coding
+- **Artifact**: Created `implementation_plan.md` with full system design

@@ -66,12 +66,16 @@ export const layout: RunTimeLayoutConfig = ({
   setInitialState,
 }) => {
   return {
-    // Center the global year selector in the header
-    actionsRender: () => [
-      <div key="year-selector" style={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
-        <GlobalYearSelector />
-      </div>
-    ],
+    // Center the global year selector in the header (hidden on Playground)
+    actionsRender: () => {
+      const isPlayground = history.location.pathname === '/playground';
+      if (isPlayground) return []; // Playground has its own filters
+      return [
+        <div key="year-selector" style={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
+          <GlobalYearSelector />
+        </div>
+      ];
+    },
     // Remove avatar - year selector is the main header element now
     avatarProps: undefined,
     // DISABLED: No watermarks for clean executive look

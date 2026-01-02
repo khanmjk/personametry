@@ -69,6 +69,13 @@ export default [
     icon: 'history',
     component: './AllTime',
   },
+  // Data Nerds Playground
+  {
+    path: '/playground',
+    name: 'Playground',
+    icon: 'experiment',
+    component: './Playground',
+  },
   // Home redirect
   {
     path: '/',
