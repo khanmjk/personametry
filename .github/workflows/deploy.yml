@@ -12,6 +12,11 @@ on:
   # Allow manual trigger
   workflow_dispatch:
 
+  # Trigger after successful Harvest API Sync
+  workflow_run:
+    workflows: ["Harvest API Sync"]
+    types: [completed]
+
 # Sets permissions for GitHub Pages deployment
 permissions:
   contents: read
