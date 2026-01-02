@@ -339,8 +339,21 @@ def save_data(records):
     }
     
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # PATH A: Primary Database (Processed Data)
     with open(OUTPUT_FILE, 'w') as f:
         json.dump(output, f, indent=2, default=str)
+    print(f"✅ Exported {len(records)} records to {OUTPUT_FILE}")
+
+    # PATH B: Dashboard Public Asset (Dual-Write for Local Dev support)
+    # Allows 'git pull' to update the dev server immediately without ETL steps
+    dashboard_path = os.path.join(os.getcwd(), 'dashboard', 'public', 'data', 'timeentries_harvest.json')
+    try:
+        os.makedirs(os.path.dirname(dashboard_path), exist_ok=True)
+        with open(dashboard_path, 'w') as f:
+            json.dump(output, f, indent=2, default=str)
+        print(f"✅ Synced to Dashboard Public: {dashboard_path}")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not sync to dashboard public folder: {e}")
         
     print(f"💾 Saved to {OUTPUT_FILE}")
 
