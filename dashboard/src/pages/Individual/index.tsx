@@ -193,6 +193,13 @@ const IndividualPage: React.FC = () => {
     yAxis: {
       title: { text: 'Hours' },
     },
+    tooltip: {
+      title: (datum: { month: string }) => datum.month,
+      items: [(datum: { month: string; hours: number }) => ({
+        name: 'Self-Care Hours',
+        value: `${datum.hours.toFixed(1)} hrs`,
+      })],
+    },
   };
 
   // Table columns for activity breakdown

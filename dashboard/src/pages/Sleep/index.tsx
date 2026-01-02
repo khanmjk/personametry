@@ -304,10 +304,11 @@ const SleepPage: React.FC = () => {
                 grid: { line: { style: { stroke: '#f0f0f0' } } },
               }}
               tooltip={{
-                formatter: (datum: { year: string; hours: number }) => ({
-                  name: datum.year,
+                title: (datum: { year: string }) => datum.year,
+                items: [(datum: { year: string; hours: number }) => ({
+                  name: 'Sleep Hours',
                   value: `${(datum.hours / 1000).toFixed(1)}k hrs`,
-                }),
+                })],
               }}
             />
           </ProCard>

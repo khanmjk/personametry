@@ -513,3 +513,15 @@
   - Lists common symptoms of using deprecated API
   - Documents the `title` + `items` pattern as the ONLY reliable approach
 - **Worklog**: Updated with comprehensive Day 4 accomplishments
+
+### 16:49 - Line Chart Tooltip Audit (Codebase-Wide) ✅
+
+- **Objective**: Apply G2 v5 tooltip fix to all Line charts in codebase
+- **Files Scanned**: 4 Line chart usages found
+- **Files Fixed**:
+  - ✅ `AllTime/index.tsx` - Annual Hours Trend (fixed earlier)
+  - ✅ `Sleep/index.tsx` - Year-over-Year Trend (was using deprecated `formatter`)
+  - ✅ `Individual/index.tsx` - Self-Care Trend (had NO tooltip config)
+  - ✅ `PersonaTrendLine.tsx` - Multi-persona trend (only had `showMarkers`)
+- **Verification**: Grep search confirms no remaining `formatter.*datum` or `showMarkers: true` patterns
+- **Result**: All Line chart tooltips now use G2 v5 `title` + `items` pattern

@@ -83,7 +83,11 @@ const PersonaTrendLine: React.FC<PersonaTrendLineProps> = ({
       title: { text: 'Hours' },
     },
     tooltip: {
-      showMarkers: true,
+      title: (datum: { month: string }) => datum.month,
+      items: [(datum: { month: string; persona: string; hours: number }) => ({
+        name: datum.persona,
+        value: `${datum.hours.toFixed(1)} hrs`,
+      })],
     },
     interactions: [{ type: 'element-highlight' }],
   };
