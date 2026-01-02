@@ -5,6 +5,9 @@ on:
     - cron: "0 7 * * *" # Daily 09:00 SAST (07:00 UTC)
   workflow_dispatch: # Manual trigger
 
+permissions:
+  contents: write
+
 jobs:
   sync-harvest-data:
     runs-on: ubuntu-latest
