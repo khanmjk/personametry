@@ -654,3 +654,26 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Fixed CI Trigger Collision**:
   - **Issue**: `deploy.yml` filter `data/etl/**` was too broad. Modifying the _automation_ script triggered the _legacy_ ETL, wiping the new data.
   - **Resolution**: Refined `paths-filter` to explicitly list `harvest_to_json.py` and `requirements.txt`. Automation script changes now correctly bypass legacy ETL.
+
+### 20:30 - Restart Dev Server
+
+- **Objective**: Restart dev server to resolve unresponsiveness.
+- **Actions**:
+  - Ran `/restart-dev` workflow.
+  - Cleared `.umi`, `node_modules/.cache`, `dist` caches.
+  - Resolved restart crash issues by waiting and verifying logs.
+  - Verified server availability on port 8000 via `curl` and browser check.
+- **Outcome**: Server is back up and running at `http://localhost:8000`.
+
+### 20:45 - Finalizing Harvest API Integration
+
+- **Resolved Local Data Staleness**:
+  - **Issue**: Local dev server served stale JSON from `dashboard/public` instead of fresh data from `data/processed`.
+  - **Resolution**: Updated `.agent/workflows/restart-dev.md` to include a data synchronization step (`cp` command).
+  - **Outcome**: Local environment now mirrors production data automatically on restart.
+- **Documentation**:
+  - **Updated**: `docs/data-architecture.md` to accurately reflect the Hybrid Pipeline (API + Legacy), Data Propagation flow, and conflict prevention strategies.
+- **Project Status**:
+  - **Automated Sync**: ✅ 7-day lookback, conflict-free.
+  - **Production**: ✅ Auto-deploys fresh data.
+  - **Local**: ✅ Auto-syncs on restart.
