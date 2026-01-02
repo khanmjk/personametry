@@ -155,63 +155,69 @@ export interface TimeEntry {
 
 ---
 
-## ETL Pipeline Design
+## Hybrid ETL Pipeline Architecture
+
+The system uses a **Hybrid Pipeline** that supports both automated API syncing and manual file uploads without data conflicts.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    DATA PIPELINE                                 │
+│                    HYBRID DATA DATA FLOW                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   OPTION A: Use QuickSight Export Directly                      │
-│   ────────────────────────────────────────                      │
-│   • Already transformed (NormalisedTask, Personas, etc.)        │
-│   • Recommended for MVP                                         │
-│   • Just parse XLSX → JSON                                      │
+│   PATH A: Automated API Sync (Daily / Manual Trigger)           │
+│   ───────────────────────────────────────────────────           │
+│   • Source: Harvest API v2                                      │
+│   • Script: data/etl/harvest_api_sync.py                        │
+│   • Logic:  Incremental Fetch + 7-Day Lookback + Deduplication  │
+│   • Output: data/processed/timeentries_harvest.json             │
+│   • Commit: Auto-commits changes to git                         │
 │                                                                 │
-│   OPTION B: ETL from Harvest (Future)                           │
-│   ────────────────────────────                                  │
-│   • Parse raw Harvest XLSX                                      │
-│   • Apply QuickSight transformation logic (258 lines)           │
-│   • Enables eliminating QuickSight dependency                   │
+│   PATH B: Manual Legacy Upload (Fallback)                       │
+│   ───────────────────────────────────────                       │
+│   • Source: seedfiles/harvest_time_report.xlsx                  │
+│   • Script: data/etl/harvest_to_json.py                         │
+│   • Logic:  Full File Parse (Overwrites API data if triggered)  │
+│   • Trigger: ONLY runs if Excel file changes                    │
 │                                                                 │
-│   OUTPUT: /data/processed/timeentries.json                      │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    DEPLOYMENT & SERVING                         │
+│   (Bridge between Data Layer and Presentation Layer)            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   PRODUCTION (GitHub Pages)                                     │
+│   ──────────────────────────                                    │
+│   • Workflow: .github/workflows/deploy.yml                      │
+│   • Action: Copies data/processed/*.json → dist/data/           │
+│                                                                 │
+│   LOCAL DEV (npm run dev)                                       │
+│   ───────────────────────                                       │
+│   • Workflow: .agent/workflows/restart-dev.md                   │
+│   • Action: Copies data/processed/*.json → public/data/         │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Key Architectural Decisions
 
-## Recommended Approach for MVP
+1.  **Separation of Concerns**:
 
-1. **Use QuickSight export directly** - already has all transformations
-2. **Parse to JSON** - simple Python script
-3. **Load in React** - via static import or fetch
-4. **Skip mock data entirely** - real data from day 1
+    - `data/processed/`: The **Database** (Source of Truth). Stored in Git.
+    - `dashboard/public/`: The **Web Server Asset**. Served to the browser.
+    - **Why?** Web servers (like `serve` or `npm run dev`) cannot access files outside their root for security. The pipeline "bridges" this gap by copying the file.
 
-### ETL Script (MVP)
+2.  **Conflict Prevention**:
 
-```python
-# data/etl/quicksight_to_json.py
-import pandas as pd
-import json
-from datetime import datetime
+    - The `deploy.yml` workflow uses strict **Path Filters**.
+    - Automated Sync runs (modifying `harvest_api_sync.py`) do **NOT** trigger Path B (Legacy ETL).
+    - This prevents the legacy script from blindly overwriting fresh API data with stale Excel data.
 
-def convert_quicksight_to_json(xlsx_path: str, output_path: str):
-    df = pd.read_excel(xlsx_path)
-
-    # Parse dates
-    df['date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
-    df['year'] = pd.to_datetime(df['Date']).dt.year
-    df['month'] = pd.to_datetime(df['Date']).dt.month
-
-    # Select and rename columns
-    records = df.to_dict('records')
-
-    with open(output_path, 'w') as f:
-        json.dump(records, f, indent=2)
-
-    print(f"Exported {len(records)} records to {output_path}")
-```
+3.  **Retroactive Data Handling**:
+    - The API Sync script uses a **7-Day Lookback Window**.
+    - It fetches data from `[Last Sync Date] - 7 Days`.
+    - This captures "forgot to log" entries from the past week without exceeding API rate limits.
 
 ---
 
@@ -219,17 +225,18 @@ def convert_quicksight_to_json(xlsx_path: str, output_path: str):
 
 ```
 personametry/
-├── seedfiles/                              # Raw source files (gitignored)
-│   ├── harvest_time_report_*.xlsx
-│   ├── personametry_quicksight_*.xlsx
-│   └── QuicksightTransformationCode.txt
+├── .github/workflows/
+│   ├── harvest_sync.yml            # Automated API Sync Workflow
+│   └── deploy.yml                  # Build & Deploy (Handles Data Copy)
+├── seedfiles/
+│   └── harvest_time_report.xlsx    # Legacy manual source
 ├── data/
 │   ├── etl/
-│   │   └── quicksight_to_json.py          # ETL script
+│   │   ├── harvest_api_sync.py     # Main Automation Script
+│   │   └── harvest_to_json.py      # Legacy ETL Script
 │   └── processed/
-│       └── timeentries.json               # Dashboard data source
-└── src/
-    └── data/
-        └── providers/
-            └── JsonDataProvider.ts        # Loads timeentries.json
+│       └── timeentries_harvest.json # The SINGLE Source of Truth
+└── dashboard/
+    └── public/
+        └── data/                   # Web Server copy (gitignored or build artifact)
 ```
