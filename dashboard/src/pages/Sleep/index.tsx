@@ -5,6 +5,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import dayjs from 'dayjs';
+import dayOfYear from 'dayjs/plugin/dayOfYear';
+dayjs.extend(dayOfYear);
 import { PageContainer, ProCard } from '@ant-design/pro-components';
 import { Row, Col, Spin, Alert, Statistic, Typography, Divider, Tag } from 'antd';
 import { Column, Line } from '@ant-design/charts';
@@ -65,7 +68,20 @@ const SleepPage: React.FC = () => {
   const monthlyData = groupByMonth(sleepEntries);
 
   // Calculate total days for averaging
-  const totalDays = isAllTime ? availableYears.length * 365 : 365;
+  // Calculate total days for averaging
+  const currentYear = dayjs().year();
+  const isCurrentYear = !isAllTime && selectedYear === currentYear;
+  
+  // For current year, use days elapsed so far. For past years, use full year (365/366).
+  let totalDays = 365;
+  if (isAllTime) {
+    totalDays = availableYears.length * 365;
+  } else if (isCurrentYear) {
+    totalDays = dayjs().dayOfYear();
+  } else {
+    // Handle leap years correctly for past years
+    totalDays = dayjs(`${selectedYear}-12-31`).dayOfYear();
+  }
 
   // Previous year comparison - only for specific year
   const prevSleepHours = !isAllTime 

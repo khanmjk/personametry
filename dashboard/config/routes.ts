@@ -21,40 +21,37 @@ export default [
     icon: 'dashboard',
     component: './Personametry',
   },
-  // Sleep / Life Constraints
+  
+  // --- FOUNDATION (Life & Analysis) ---
   {
     path: '/sleep',
     name: 'Sleep',
     icon: 'experiment',
     component: './Sleep',
-  },
-  // Trend Analysis
-  {
-    path: '/trends',
-    name: 'Trends',
-    icon: 'lineChart',
-    component: './Trends',
-  },
-  // Personas Deep Dive
-  {
-    path: '/personas',
-    name: 'Personas',
-    icon: 'team',
-    component: './Personas',
-  },
-  // Individual Persona (Self Investment)
+  }, // P0
   {
     path: '/individual',
     name: 'Individual',
     icon: 'heart',
     component: './Individual',
-  },
-  // Work Persona
+  }, // P2
+  {
+    path: '/personas',
+    name: 'Personas',
+    icon: 'team',
+    component: './Personas',
+  }, // P1/P4/P5
   {
     path: '/work',
     name: 'Work',
     icon: 'schedule',
     component: './Work',
+  }, // P3
+  {
+    path: '/trends',
+    name: 'Trends',
+    icon: 'lineChart',
+    component: './Trends',
   },
   {
     path: '/gains-losses',
@@ -62,38 +59,43 @@ export default [
     icon: 'rise',
     component: './GainsLosses',
   },
-  // All Time / Historical Overview
   {
     path: '/alltime',
-    name: 'All Time',
+    name: 'All Time Insights',
     icon: 'history',
     component: './AllTime',
   },
-  // Data Nerds Playground
+
+  // --- MACHINE LEARNING (Advanced Intelligence) ---
+  {
+    path: '/machine-learning',
+    name: 'ML Goal Optimizer',
+    icon: 'robot',
+    component: './MachineLearning',
+  },
+  {
+    path: '/anomaly-detection',
+    name: 'ML Anomaly Detector',
+    icon: 'alert',
+    component: './AnomalyDetection',
+  },
+
+  // --- DATA DIVING (Raw Access) ---
   {
     path: '/playground',
-    name: 'Playground',
+    name: 'Data Nerds Playground',
     icon: 'experiment',
     component: './Playground',
   },
-  {
-      path: '/machine-learning',
-      name: 'Machine Learning',
-      icon: 'robot', 
-      component: './MachineLearning',
-  },
-  {
-      path: '/anomaly-detection',
-      name: 'Anomaly Detection',
-      icon: 'alert',
-      component: './AnomalyDetection',
-  },
+
+  // --- DEVELOPER (System) ---
   {
     path: '/about',
-    name: 'About',
+    name: 'About: Developer',
     icon: 'infoCircle',
     component: './About',
   },
+  
   // Home redirect
   {
     path: '/',

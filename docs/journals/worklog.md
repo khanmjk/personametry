@@ -1038,3 +1038,31 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Objective**: Clean up Radar Chart visual noise.
 - **Change**: Rounded all tooltip and axis values to whole numbers (removed decimals) for cleaner readability.
 - **Verification**: Verified tooltip displays clean integers (e.g., "228 hrs").
+
+### 14:35 - Menu Reorganization (Life-First Architecture) ✅
+
+- **Objective**: Align navigation with Personametry philosophy (Life First, then Work).
+- **Changes**:
+  - **Foundation**: Grouped Sleep, Individual, Personas, Work, Trends, Gains/Losses.
+  - **Machine Learning**: Created dedicated section for "The Automator" and "The Inspector".
+  - **Data Diving**: Renamed from "Archive" for historical data access.
+  - **Developer**: Added technical section for "About".
+- **Result**: Sidebar now enforces the logical mental model of the system.
+
+### 15:00 - Menu Finalization & Renaming ✅
+
+- **Objective**: Improve clarity of feature names and revert to flat list for simplicity.
+- **Change**: Reverted to `layout: 'mix'` and flattened menu structure.
+- **Renames**:
+  - "The Automator" -> **ML Goal Optimizer**
+  - "The Inspector" -> **ML Anomaly Detector**
+  - "All Time" -> **All Time Insights**
+  - "Playground" -> **Data Nerds Playground**
+  - "About" -> **About: Developer**
+
+### 15:15 - Bug Fix: Avg. Hours/Day Calculation ✅
+
+- **Issue**: "Avg. Hours/Day" was incorrectly dividing year-to-date total by 365 for the current year, resulting in artificially low averages (e.g., 0.0).
+- **Fix**: Updated `Sleep/index.tsx` to use `dayjs().dayOfYear()` (days elapsed) as the divisor when the selected year is the current year.
+- **Result**: Average now correctly reflects "hours per day _so far_".
+- **Verification**: Verified by user.

@@ -178,7 +178,7 @@ export default defineConfig({
   },
   utoopack: {},
   requestRecord: {},
-  exportStatic: {},
+
   define: {
     'process.env.CI': process.env.CI,
   },
