@@ -43,9 +43,12 @@ const MachineLearningPage: React.FC = () => {
             const data = await loadTimeEntries(source);
             setEntries(data.entries);
             
-            // Phase 1: Heavy Computation (Run once)
+            setEntries(data.entries);
+            
+            // Phase 1: Heavy Computation (Async with Yielding)
+            // No need for setTimeout wrapper as the service now chunks work and yields
             const mlService = new MachineLearningService();
-            const baseData = mlService.prepareBaselines(data.entries);
+            const baseData = await mlService.prepareBaselinesAsync(data.entries);
             setBaselines(baseData);
             setLoading(false);
         } catch (err) {
@@ -93,7 +96,19 @@ const MachineLearningPage: React.FC = () => {
   // Removed old runOptimization function
 
   if (error) return <PageContainer><Alert type="error" message={error} /></PageContainer>;
-  if (loading && !result) return <PageContainer><Spin size="large" /></PageContainer>;
+  if (error) return <PageContainer><Alert type="error" message={error} /></PageContainer>;
+  
+  if (loading && !result) return (
+      <PageContainer>
+          <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <Spin size="large" tip="Initializing Personametry Engine..." />
+              <div style={{ marginTop: 16, color: '#888' }}>
+                  Analyzing 10 years of history...
+              </div>
+          </div>
+      </PageContainer>
+  );
+
   if (!result) return <PageContainer><Spin /></PageContainer>;
 
   // Helper for safe access
@@ -220,8 +235,8 @@ const MachineLearningPage: React.FC = () => {
                         marks={{ 0: '0h', 175: '175h' }}
                         value={contractHours} 
                         onChange={(v) => {
-                            setContractHours(v);
-                            if (v > workCap) setWorkCap(v); // Push ceiling up
+                            if (v !== contractHours) setContractHours(v);
+                            if (v > workCap && v !== workCap) setWorkCap(v); // Push ceiling up
                         }} 
                     />
                 </div>
@@ -236,8 +251,8 @@ const MachineLearningPage: React.FC = () => {
                         marks={{ 0: '0h', 188: '188h' }}
                         value={workCap} 
                         onChange={(v) => {
-                            setWorkCap(v);
-                            if (v < contractHours) setContractHours(v); // Push floor down
+                            if (v !== workCap) setWorkCap(v);
+                            if (v < contractHours && v !== contractHours) setContractHours(v); // Push floor down
                         }} 
                     />
                 </div>

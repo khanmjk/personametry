@@ -1,9 +1,10 @@
 import { LinkOutlined } from '@ant-design/icons';
-import type { MenuDataItem, Settings as LayoutSettings } from '@ant-design/pro-components';
+import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
 import React from 'react';
+import { Divider } from 'antd';
 import {
   AvatarDropdown,
   AvatarName,
@@ -65,23 +66,7 @@ export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
 }) => {
-  const insertDividerBefore = (
-    items: MenuDataItem[],
-    targetPath: string,
-    dividerKey: string
-  ): MenuDataItem[] => {
-    const next: MenuDataItem[] = [];
-    items.forEach((item) => {
-      if (item.path === targetPath) {
-        const lastItem = next[next.length - 1];
-        if (lastItem?.type !== 'divider') {
-          next.push({ key: dividerKey, type: 'divider' });
-        }
-      }
-      next.push(item);
-    });
-    return next;
-  };
+  const dividerPaths = new Set(['/playground', '/about']);
 
   return {
     // Center the global year selector in the header (hidden on Playground)
@@ -109,18 +94,18 @@ export const layout: RunTimeLayoutConfig = ({
     bgLayoutImgList: [],
     // DISABLED: No dev links
     links: [],
-    menuDataRender: (menuData) => {
-      let updated = insertDividerBefore(
-        menuData,
-        '/playground',
-        'menu-divider-playground'
+    menuItemRender: (item, defaultDom) => {
+      const itemPath = item.path || item.itemPath;
+      if (!itemPath || !dividerPaths.has(itemPath)) {
+        return defaultDom;
+      }
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <Divider style={{ margin: '6px 12px' }} />
+          {defaultDom}
+        </div>
       );
-      updated = insertDividerBefore(
-        updated,
-        '/about',
-        'menu-divider-about'
-      );
-      return updated;
     },
     menuHeaderRender: undefined,
     // Children render - no extra wrapper needed, rootContainer handles provider

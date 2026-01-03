@@ -949,3 +949,25 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **2026 Forecast**: Blue (Standard)
   - **2026 Optimized**: Green (Standard)
 - **Verification**: Verified via screenshot. Legend correctly identifies all 4 layers. Red layer clearly shows the "sabbatical shape" vs the "baseline shape".
+
+### 12:35 - Fixed Maximum Update Depth Error (Slider Logic) ✅
+
+- **Issue**: User reported "Maximum update depth exceeded" when rapidly dragging Contract/Work sliders.
+- **Root Cause**: Coupled sliders (Floor/Ceiling logic) were firing redundant `setState` calls during rapid drag events, potentially causing a render loop or overwhelming React's batching.
+- **Fix**: Added guard clauses (`if (v !== state)`) to `Slider.onChange` handlers to ensure state is only updated when values actually change.
+- **Outcome**: Smoother slider interaction, preventing infinite update loops.
+
+### 12:40 - Improved ML Page Loading UX ✅
+
+- **Issue**: User reported page lag/freeze when navigating to Machine Learning due to heavy sync computation blocking the main thread.
+- **Fix**:
+  - Wrapped `prepareBaselines()` in `setTimeout(..., 100)` to yield the main thread, allowing the initial render to paint.
+  - Added dedicated loading state: "Initializing Personametry Engine... Analyzing 10 years of history..."
+- **Outcome**: Immediate feedback on navigation, user sees loading spinner instead of frozen screen.
+
+### 12:45 - Refactored ML Engine for Responsiveness (Async Chunking) ✅
+
+- **Issue**: User reported "Page Unresponsive" dialog. The simple `setTimeout` wrapper wasn't enough; the monolithic calculation still locked the main thread for too long once it started.
+- **Solution**: Refactored `MachineLearningService` to include `prepareBaselinesAsync()`.
+- **Technique**: Used "Chunking" pattern. The engine now yields the main thread (`await new Promise(r => setTimeout(r, 0))`) after processing each persona's forecast and baseline.
+- **Outcome**: The browser remains responsive (no freeze dialog) while the engine crunches data, and the loading spinner animation stays fluid.
