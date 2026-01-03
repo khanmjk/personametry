@@ -170,12 +170,7 @@ const GainsLossesPage: React.FC = () => {
                 title={`Year-over-Year Change (${previousYear} → ${currentYear})`}
                 height={500}
              />
-             <div style={{ textAlign: 'center', marginTop: 10 }}>
-               <Space size="large">
-                 <Space><div style={{width: 12, height:12, background: '#52c41a'}} /> Gains (More time)</Space>
-                 <Space><div style={{width: 12, height:12, background: '#ff4d4f'}} /> Losses (Less time)</Space>
-               </Space>
-             </div>
+
            </ProCard>
         </Col>
 
