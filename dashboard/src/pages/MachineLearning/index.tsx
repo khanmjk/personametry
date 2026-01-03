@@ -37,26 +37,38 @@ const MachineLearningPage: React.FC = () => {
 
   // Load Data
   useEffect(() => {
+    let isMounted = true;
+
     const fetchData = async () => {
         try {
             const source = getDataSource();
             const data = await loadTimeEntries(source);
-            setEntries(data.entries);
             
-            setEntries(data.entries);
+            if (isMounted) {
+                setEntries(data.entries);
+            }
             
             // Phase 1: Heavy Computation (Async with Yielding)
             // No need for setTimeout wrapper as the service now chunks work and yields
             const mlService = new MachineLearningService();
             const baseData = await mlService.prepareBaselinesAsync(data.entries);
-            setBaselines(baseData);
-            setLoading(false);
+            
+            if (isMounted) {
+                setBaselines(baseData);
+                setLoading(false);
+            }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load data');
-            setLoading(false);
+            if (isMounted) {
+                setError(err instanceof Error ? err.message : 'Failed to load data');
+                setLoading(false);
+            }
         }
     };
     fetchData();
+
+    return () => {
+        isMounted = false;
+    };
   }, []);
 
   // Run Optimization (Lightweight - instant update)

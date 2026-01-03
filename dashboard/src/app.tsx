@@ -3,7 +3,7 @@ import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   AvatarDropdown,
   AvatarName,
@@ -52,12 +52,46 @@ export async function getInitialState(): Promise<{
 }
 
 /**
+ * Error Boundary Wrapper Component
+ * Captures ChunkLoadErrors and reloads the page once to fix version mismatches.
+ */
+const GlobalErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      const isChunkError = /Loading chunk [\d]+ failed/.test(event.message) || /Loading CSS chunk [\d]+ failed/.test(event.message);
+      
+      if (isChunkError) {
+        event.preventDefault();
+        const lastReload = sessionStorage.getItem('chunk_reload_ts');
+        const now = Date.now();
+        
+        // Only reload if we haven't reloaded recently (e.g., within 10 seconds) to prevent loops
+        if (!lastReload || now - parseInt(lastReload) > 10000) {
+          console.warn('Chunk load error detected. Reloading page...');
+          sessionStorage.setItem('chunk_reload_ts', now.toString());
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  return <>{children}</>;
+};
+
+/**
  * UmiJS Root Container - wraps the entire application
  * This is the right place to put global providers like YearContext
  * @see https://umijs.org/docs/api/runtime-config#rootcontainer
  */
 export function rootContainer(container: React.ReactNode) {
-  return <YearProvider>{container}</YearProvider>;
+  return (
+    <GlobalErrorBoundary>
+      <YearProvider>{container}</YearProvider>
+    </GlobalErrorBoundary>
+  );
 }
 
 // Personametry Layout Configuration
