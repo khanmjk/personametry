@@ -984,3 +984,19 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Validated process running.
   - Validated HTTP 200 OK via curl.
   - Validated dashboard load via screenshot (2026 data visible).
+
+### 13:10 - Anomaly Detection Feature ("The Inspector") ✅
+
+- **Objective**: Implement rigorous "PhD-level" anomaly detection to identify structural violations and behavioral outliers.
+- **Engine (AnomalyService)**:
+  - **Algorithm**: Implemented STL Decomposition (Seasonal-Trend with LOESS).
+  - **Detection Logic**: Uses Modified Z-Score (MAD) on residuals to find statistical anomalies.
+  - **Structural Checks**: Flags >24h days, missing data, and weekend work violations.
+- **UI (AnomalyDetection Page)**:
+  - **Incident Log**: Sidebar categorizing issues (Critical, Warning, Structural).
+  - **Forensic Chart**: Interactive Line visualization showing Actual vs Expected (Seasonality+Trend).
+  - **Annotations**: Visual markers (⚠️) for specific anomaly points.
+- **Verification**:
+  - Validated on real data: Detected actual "31-hour day" structural violations in historical dataset.
+  - Confirmed STL Decomposition correctly separates seasonal patterns from trends.
+- **Artifact**: Created `walkthrough.md` with visual proof.

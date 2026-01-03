@@ -83,6 +83,12 @@ export default [
       component: './MachineLearning',
   },
   {
+      path: '/anomaly-detection',
+      name: 'Anomaly Detection',
+      icon: 'alert',
+      component: './AnomalyDetection',
+  },
+  {
     path: '/about',
     name: 'About',
     icon: 'infoCircle',
