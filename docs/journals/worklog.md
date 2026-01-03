@@ -720,6 +720,12 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Outcome**: Filter now works robustly for all personas, maintaining UI stability even with empty data.
 
 - **Bug Fix**: Incorrect "Avg. Hours/Day" Calculation
+
   - **Issue**: "Avg. Hours/Day" for 2026 was showing `0.1 hrs` (calculating `38.0 / 365`).
   - **Refinement**: Switched from integer `dayOfYear()` (3 days) to fractional `hoursElapsed` (2.26 days) for precise run-rate.
   - **Outcome**: Value corrected to `16.8 hrs` (excl sleep) / `21.3 hrs` (incl sleep).
+
+- **UI Enhancement**: Hours in "Top 3 Personas" Card
+  - **Request**: Display hours alongside percentages for better context.
+  - **Implementation**: Updated card to show `25.2h` (secondary text) next to `66.3%` (primary text).
+  - **Outcome**: Improved data readability without cluttering the layout.

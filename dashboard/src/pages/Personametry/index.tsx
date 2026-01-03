@@ -283,7 +283,10 @@ const PersonametryDashboard: React.FC = () => {
                       {PERSONA_SHORT_NAMES[p.persona]}
                     </Tag>
                   </Space>
-                  <Text strong style={{ fontSize: 11 }}>{p.percentageOfTotal}%</Text>
+                  <Space size={8}>
+                    <Text type="secondary" style={{ fontSize: 11 }}>{formatHours(p.totalHours)}h</Text>
+                    <Text strong style={{ fontSize: 11 }}>{p.percentageOfTotal}%</Text>
+                  </Space>
                 </div>
               ))}
             </Space>
