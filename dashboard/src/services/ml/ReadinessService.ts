@@ -21,7 +21,7 @@ export class ReadinessService {
         if (recentHistory.length === 0) return 0.5; // Neutral default
 
         // 1. Sleep Score (Target: 7.5h/day)
-        const avgDailySleep = this.calculateAvgDailyHours(recentHistory, 'P0 Life Constraints');
+        const avgDailySleep = this.calculateAvgDailyHours(recentHistory, 'P0 Life Constraints (Sleep)');
         // Score: 1.0 if >= 7.5h, scales down linearly to 0 at 4h
         const sleepScore = Math.min(1, Math.max(0, (avgDailySleep - 4) / (7.5 - 4)));
 

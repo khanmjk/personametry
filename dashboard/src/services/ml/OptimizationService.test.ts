@@ -81,7 +81,7 @@ describe('OptimizationService v2.3', () => {
         // Low utilization scenario
         const forecasts = {
             'P3 Professional': mockForecast(100), // Work
-            'P0 Life Constraints': mockForecast(228) // Sleep
+            'P0 Life Constraints (Sleep)': mockForecast(228) // Sleep
         };
         
         // Total allocated ~ 328h. Capacity ~ 730h.

@@ -823,3 +823,14 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Solution**: If 2025 Work avg < 120h/mo, calculate 4-year average (2021-2024) for "Business as Usual" forecast.
   - **Result**: 2026 Forecast now shows realistic BAU levels, while 2025 Actual correctly displays sabbatical (low) hours.
   - **Verification**: Unit test `verify_sabbatical.ts` passed (2025 Actual: 100h, 2026 Forecast: 160h).
+
+### 10:30 - Sleep Data String Mismatch Fix ✅
+
+- **Issue**: Sleep data still showing 0 in Radar chart despite earlier fix.
+- **Root Cause**: Multiple files using inconsistent persona strings:
+  - `MachineLearningService.ts` stored data under `"P0 Life Constraints (Sleep)"` ✅
+  - `MachineLearning/index.tsx` looked up data using `"P0 Life Constraints"` ❌
+  - `ReadinessService.ts` filtered by `"P0 Life Constraints"` ❌
+- **User Insight**: "...should be using one master data source for all data features surely?"
+- **Fix**: Updated all 3 files to use the correct string: `"P0 Life Constraints (Sleep)"`.
+- **Future Recommendation**: Use the `Persona` enum from `models/personametry.ts` instead of hardcoded strings.

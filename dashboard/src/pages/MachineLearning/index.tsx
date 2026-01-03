@@ -113,8 +113,8 @@ const MachineLearningPage: React.FC = () => {
       { name: 'Work', type: '2026 Forecast', value: getBaseline('P3 Professional') },
       { name: 'Work', type: '2026 Optimized', value: result.optimizedProfile.work },
       
-      { name: 'Sleep', type: '2025 Actual', value: get2025History('P0 Life Constraints') },
-      { name: 'Sleep', type: '2026 Forecast', value: getBaseline('P0 Life Constraints') },
+      { name: 'Sleep', type: '2025 Actual', value: get2025History('P0 Life Constraints (Sleep)') },
+      { name: 'Sleep', type: '2026 Forecast', value: getBaseline('P0 Life Constraints (Sleep)') },
       { name: 'Sleep', type: '2026 Optimized', value: result.optimizedProfile.sleep },
       
       { name: 'Family', type: '2025 Actual', value: get2025History('P5 Family') },
