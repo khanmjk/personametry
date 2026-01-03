@@ -12,6 +12,9 @@ import dayjs from 'dayjs';
 const { Text } = Typography;
 const { Option } = Select;
 
+import { useYear } from '@/contexts/YearContext';
+import { getAvailableYears } from '@/services/personametryService';
+
 // Standard Ant Design Charts (G2Plot) format
 interface ChartDataPoint {
   date: string;
@@ -21,12 +24,16 @@ interface ChartDataPoint {
 
 const AnomalyDetectionPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [entries, setEntries] = useState<TimeEntry[]>([]); // ALL entries
+  const [filteredEntries, setFilteredEntries] = useState<TimeEntry[]>([]); // Filtered for detection
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<string>('P3 Professional');
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [chartAnomalies, setChartAnomalies] = useState<Anomaly[]>([]); // For annotations
   const [stats, setStats] = useState({ critical: 0, warning: 0, structural: 0 });
+
+  // Global Year Context
+  const { selectedYear, isAllTime, setAvailableYears } = useYear();
 
   // Load Data & Run Detection
   useEffect(() => {
@@ -34,9 +41,20 @@ const AnomalyDetectionPage: React.FC = () => {
         try {
             const data = await loadTimeEntries(getDataSource());
             setEntries(data.entries);
+            
+            // Sync available years to global context
+            const years = getAvailableYears(data.entries);
+            setAvailableYears(years);
+
+            // Filter based on Global Selector
+            const relevantEntries = isAllTime 
+                ? data.entries 
+                : data.entries.filter(e => e.year === selectedYear);
+
+            setFilteredEntries(relevantEntries);
 
             const engine = new AnomalyService();
-            const results = engine.detectAll(data.entries);
+            const results = engine.detectAll(relevantEntries);
             setAnomalies(results);
             
             setStats({
@@ -52,25 +70,44 @@ const AnomalyDetectionPage: React.FC = () => {
         }
     };
     init();
-  }, []);
+  }, [selectedYear, isAllTime, setAvailableYears]);
 
   // Update Chart when Persona Changes
   useEffect(() => {
-      if (entries.length === 0) return;
+      if (filteredEntries.length === 0) return;
 
       const engine = new AnomalyService();
       
-      const relevant = entries.filter(e => e.prioritisedPersona === selectedPersona).sort((a, b) => dayjs(a.date).unix() - dayjs(b.date).unix());
+      const relevant = filteredEntries.filter(e => e.prioritisedPersona === selectedPersona).sort((a, b) => dayjs(a.date).unix() - dayjs(b.date).unix());
       
-      const start = dayjs().subtract(6, 'month'); // Show last 6 months for better visibility
-      const end = dayjs();
+      // Dynamic Date Range based on Filter
+      const end = isAllTime ? dayjs() : dayjs(`${selectedYear}-12-31`);
+      const start = isAllTime 
+          ? dayjs().subtract(6, 'month') // Default view for all time (too much data otherwise)
+          : dayjs(`${selectedYear}-01-01`); 
+
+      // If specific year, show full year. If All Time, show last 6 months window or full? 
+      // User likely wants to scroll or zoom, but G2Plot Line basic is static.
+      // Let's stick to the filtered data range.
       
       const values: number[] = [];
       const dates: string[] = [];
       const entryMap = new Map(relevant.map(e => [e.date, e.hours]));
       
-      let curr = start;
-      while (curr.isBefore(end)) {
+      // Re-construct dense timeline for the view window
+      // Use the actual data range from the filtered entries
+      if (relevant.length === 0) {
+          setChartData([]);
+          return;
+      }
+
+      const firstDate = dayjs(relevant[0].date);
+      const lastDate = dayjs(relevant[relevant.length - 1].date);
+      
+      let curr = firstDate;
+      const final = lastDate;
+
+      while (curr.isBefore(final) || curr.isSame(final, 'day')) {
           const d = curr.format('YYYY-MM-DD');
           dates.push(d);
           values.push(entryMap.get(d) || 0);
@@ -79,7 +116,7 @@ const AnomalyDetectionPage: React.FC = () => {
 
       const decomp = engine.stlDecomposition(values, 7);
       
-      // Transform for G2Plot (Long format)
+          // Transform for G2Plot (Long format)
       const newChartData: ChartDataPoint[] = [];
       dates.forEach((d, i) => {
           newChartData.push({ date: d, type: 'Actual', value: values[i] });
@@ -89,17 +126,24 @@ const AnomalyDetectionPage: React.FC = () => {
       setChartData(newChartData);
 
       // Filter anomalies for this persona and time range
+      // The 'anomalies' state is already filtered by year effectively, since we ran detectAll on filteredEntries
+      // But we still filter by persona here
       const visibleAnomalies = anomalies.filter(a => 
-          (a.category === selectedPersona || a.type === 'Structural') && 
-          dayjs(a.date).isAfter(start) &&
-          dayjs(a.date).isBefore(end)
+          (a.category === selectedPersona || a.type === 'Structural')
       );
       setChartAnomalies(visibleAnomalies);
 
-  }, [selectedPersona, entries, anomalies]);
+  }, [selectedPersona, filteredEntries, anomalies, isAllTime, selectedYear]);
 
 
-  const getSeverityColor = (s: string) => s === 'Critical' ? '#cf1322' : '#d4b106';
+  const getSeverityColor = (severity: string) => {
+      switch (severity) {
+          case 'Critical': return 'red';
+          case 'Warning': return 'gold';
+          case 'Info': return 'blue';
+          default: return 'default';
+      }
+  };
 
   // Chart Configuration
   const config = {
@@ -108,38 +152,53 @@ const AnomalyDetectionPage: React.FC = () => {
     yField: 'value',
     seriesField: 'type',
     smooth: true,
-    animation: false, // Performance
+    animation: {
+      appear: {
+        animation: 'path-in',
+        duration: 2000,
+      },
+    },
     colorField: 'type',
     scale: {
         color: {
             domain: ['Actual', 'Expected'],
-            range: ['#52c41a', '#1890ff'] // Green, Blue
+            range: ['#28A745', '#1890ff'], // Green for Actual, Blue for Expected (User Request)
         }
     },
     xAxis: {
         type: 'time',
         mask: 'MMM D'
     },
+    yAxis: {
+      label: {
+        formatter: (v: string) => `${v}h`,
+      },
+      max: 24, // Keep scale sane, though anomalies might exceed
+    },
+    legend: {
+      position: 'top-left' as const,
+    },
     // Add annotations for anomalies
     annotations: chartAnomalies.map(a => ({
         type: 'text',
         position: [a.date, a.value],
-        content: '⚠️',
-        offsetY: -15,
+        content: a.severity === 'Critical' ? '🔴' : '⚠️',
+        offsetY: -10,
         style: {
-            fontSize: 18,
             textAlign: 'center',
-            fill: '#cf1322', // Red color for text
+            fontSize: 16,
         },
-    } as any)), // Type casting for older TS definitions if needed
+        tooltip: a.description
+    })),
     tooltip: {
-        showMarkers: false,
-        items: [(datum: ChartDataPoint) => {
-            return { 
-                name: datum.type, 
-                value: datum.value?.toFixed(1) + 'h' 
-            };
-        }]
+        title: (d: any) => d.date, // Show date in tooltip title
+        items: [
+            (d: any) => ({
+                name: d.type,
+                value: d.value.toFixed(1) + 'h',
+                color: d.type === 'Actual' ? '#28A745' : '#1890ff'
+            })
+        ]
     }
   };
 
@@ -154,7 +213,7 @@ const AnomalyDetectionPage: React.FC = () => {
                         value={stats.critical} 
                         valueStyle={{ color: '#cf1322' }} 
                         prefix={<WarningOutlined />} 
-                        suffix={anomalies.length > 0 ? <Tag color="red" style={{ marginLeft: 8 }}>{((stats.critical/anomalies.length)*100).toFixed(0)}%</Tag> : null}
+                        suffix={<Tag color="red">{((stats.critical / Math.max(stats.critical+stats.warning, 1)) * 100).toFixed(0)}%</Tag>}
                     />
                 </Card>
             </Col>
@@ -164,7 +223,7 @@ const AnomalyDetectionPage: React.FC = () => {
                         title="Warnings" 
                         value={stats.warning} 
                         valueStyle={{ color: '#faad14' }} 
-                        prefix={<LineChartOutlined />}
+                        prefix={<ThunderboltOutlined />}
                     />
                 </Card>
             </Col>
@@ -268,6 +327,16 @@ const AnomalyDetectionPage: React.FC = () => {
                              </Space>
                          );
                     }
+                },
+                {
+                    title: 'Year',
+                    dataIndex: 'date',
+                    width: 80,
+                    hideInSearch: false, // Allow searching
+                    render: (_, record) => dayjs(record.date.split(' to ')[0]).year(),
+                    // Filter Logic
+                    filters: Array.from(new Set(anomalies.map(a => dayjs(a.date.split(' to ')[0]).year()))).sort().reverse().map(y => ({ text: y.toString(), value: y.toString() })),
+                    onFilter: (value, record) => dayjs(record.date.split(' to ')[0]).year().toString() === value,
                 },
                 {
                     title: 'Type',
