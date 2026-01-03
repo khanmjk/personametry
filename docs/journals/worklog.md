@@ -677,3 +677,17 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Automated Sync**: ✅ 7-day lookback, conflict-free.
   - **Production**: ✅ Auto-deploys fresh data.
   - **Local**: ✅ Auto-syncs on restart.
+
+### 05:25 - Resolved Harvest Data Duplication
+
+- **Issue**: Discrepancy in Jan 2026 hours (56.52h Local vs 48.05h Harvest).
+- **Root Cause**:
+  - `harvest_api_sync.py` dropped `external_id` (Harvest ID) during transformation.
+  - Deduplication relied on `hours` in the composite key.
+  - Updating an entry (e.g. 8h -> 4h) created a new record instead of updating the existing one.
+- **Resolution**:
+  - **Code**: Updated output schema to persist `external_id`.
+  - **Logic**: Refactored `merge_and_deduplicate` to prioritize ID matches for updates.
+  - **Data**: Wiped corrupted 2026 data and re-synced from API.
+  - **Path Fix**: Corrected path resolution for the dual-write `dashboard/public` sync.
+- **Outcome**: 2026 data verifiably accurate (48.20h).
