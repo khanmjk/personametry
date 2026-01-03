@@ -691,3 +691,29 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Data**: Wiped corrupted 2026 data and re-synced from API.
   - **Path Fix**: Corrected path resolution for the dual-write `dashboard/public` sync.
 - **Outcome**: 2026 data verifiably accurate (48.20h).
+
+### 06:00 - Overview Dashboard Optimization & Pulse Chart Enhancements
+
+- **Objective**: Improve the usability of the Overview Dashboard by fitting content "above the fold" and adding granular controls.
+- **Layout Optimization**:
+  - **Goal**: Fit dashboard on single screen (exclude vertical scroll).
+  - **Date Format**: Changed "Current Pulse" daily X-axis labels from `YYYY-MM-DD` to `MMM D` (e.g., "Dec 12") to prevent vertical rotation.
+  - **Vertical Space**: Reduced Pulse Chart height (`220px` -> `180px`) and Annual Charts (`420px` -> `360px`). Tightened margins on dividers and headers.
+- **Tooltip Color Fix**:
+  - **Issue**: "Current Pulse" tooltips showed grey bullets instead of persona colors.
+  - **Fix**: Removed manual `color` property from `tooltip.items`, allowing G2Plot to automatically sync colors with the series.
+- **Persona Filter Feature**:
+  - **Request**: Add ability to filter "Current Pulse" chart by specific persona.
+  - **Implementation**:
+    - Added second `Select` component next to Granularity selector.
+    - Options: "All Personas" (Stacked Column) vs Specific Persona (Filtered View).
+    - Logic: Filters `pulseData` and recalculates "Are Daily Hours" KPI dynamically.
+- **Bug Fix**: Pulse Card Disappearance
+  - **Issue**: Selecting a specific persona caused the entire Pulse Card to unmount/vanish.
+  - **Root Cause**:
+    1. Mismatch between "Full Name" (Dropdown key) and "Short Name" (Data key).
+    2. Aggressive `pulseData.length > 0` check hid the component when data was sparse.
+  - **Fix**:
+    1. Standardized dropdown values to use `PERSONA_SHORT_NAMES`.
+    2. Removed the conditional visibility check on the parent component.
+  - **Outcome**: Filter now works robustly for all personas, maintaining UI stability even with empty data.

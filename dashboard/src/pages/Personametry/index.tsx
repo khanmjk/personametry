@@ -15,7 +15,9 @@ import {
   CalendarOutlined,
   TrophyOutlined,
   GlobalOutlined,
+  FireOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import type { TimeEntry, DataMetadata } from '@/models/personametry';
 import { PERSONA_COLORS, PERSONA_SHORT_NAMES, YEAR_COLORS, STATUS_COLORS } from '@/models/personametry';
 import { useYear } from '@/contexts/YearContext';
@@ -29,6 +31,10 @@ import {
   calculateYoYComparison,
   formatHours,
   getDataSource,
+  groupByDay,
+  groupEntriesByPeriod,
+  getLastNDays,
+  getPersonaColor,
 } from '@/services/personametryService';
 
 const { Title, Text } = Typography;
@@ -89,6 +95,79 @@ const PersonametryDashboard: React.FC = () => {
   // YoY comparison (excluding sleep) - only when specific year selected
   const yoyComparison = isAllTime ? [] : calculateYoYComparison(entries, selectedYear as number, (selectedYear as number) - 1)
     .filter(item => item.persona !== SLEEP_PERSONA);
+
+  // ==========================================
+  // CURRENT PULSE LOGIC (Last 30 Days)
+  // ==========================================
+  const currentYear = new Date().getFullYear();
+  const isCurrentYear = !isAllTime && selectedYear === currentYear;
+  
+  // State for granularity control
+  const [pulseGranularity, setPulseGranularity] = useState<'day' | 'week' | 'month'>('day');
+  // State for persona filtering
+  const [pulsePersona, setPulsePersona] = useState<string>('All');
+
+  // get list of personas for dropdown
+  const personaOptions = [
+    { label: 'All Personas', value: 'All' },
+    ...Object.keys(PERSONA_SHORT_NAMES)
+      .filter(p => p !== SLEEP_PERSONA)
+      .map(p => {
+        const shortName = PERSONA_SHORT_NAMES[p] || p;
+        return { label: shortName, value: shortName };
+      })
+  ];
+
+  // Data for Pulse Chart
+  // Daily: Last 30 Days
+  // Weekly/Monthly: All entries for the current year
+  const pulseEntries = isCurrentYear 
+    ? (pulseGranularity === 'day' ? getLastNDays(entries, 30) : filterByYear(entries, currentYear))
+    : [];
+
+  const pulseSummaries = isCurrentYear ? groupEntriesByPeriod(pulseEntries, pulseGranularity) : [];
+  
+  // Transform for Ant Design Charts (Stacked Column)
+  const pulseData: { date: string; persona: string; hours: number; rawDate: string }[] = [];
+  if (isCurrentYear) {
+    pulseSummaries.forEach((period: any) => {
+      Object.entries(period.byPersona).forEach(([persona, hours]) => {
+         // Exclude sleep
+         if (persona !== 'Sleep' && persona !== SLEEP_PERSONA) {
+             // Apply Persona Filter
+             // persona is Short Name (from service), pulsePersona is Short Name (from select)
+             if (pulsePersona !== 'All' && persona !== pulsePersona) {
+                 return;
+             }
+
+             // Optimize label for Day view to save space (e.g. "Dec 4")
+             const displayDate = pulseGranularity === 'day' 
+                ? dayjs(period.date).format('MMM D') 
+                : period.date;
+                
+             pulseData.push({
+                 date: displayDate, 
+                 rawDate: period.date,
+                 persona,
+                 hours: Math.round((hours as number) * 10) / 10
+             });
+         }
+      });
+    });
+  }
+  
+  // Calculate Pulse Stats
+  // Filter entries for stats calculation if a specific persona is selected
+  const statsEntries = pulsePersona === 'All' 
+     ? pulseEntries 
+     : pulseEntries.filter(e => {
+         const shortName = PERSONA_SHORT_NAMES[e.prioritisedPersona] || e.prioritisedPersona;
+         return shortName === pulsePersona;
+     });
+
+  const pulseHours = statsEntries.reduce((sum, e) => (e.prioritisedPersona !== SLEEP_PERSONA ? sum + e.hours : sum), 0);
+  const pulsePeriods = pulseSummaries.length || 1;
+  const pulseAvg = pulseHours / pulsePeriods;
 
   // Pie chart data - with percentage, hours, and explicit color
   const pieData = personaSummaries.map((p) => ({
@@ -216,6 +295,94 @@ const PersonametryDashboard: React.FC = () => {
         </Col>
       </Row>
 
+      {/* CURRENT PULSE SECTION - Only for Current Year */}
+      {isCurrentYear && (
+        <React.Fragment>
+          <Divider style={{ margin: '12px 0 8px 0' }}>
+            <Space>
+              <FireOutlined style={{ color: '#fa541c' }} />
+              <Text strong style={{ fontSize: 16 }}>Current Pulse</Text>
+              <Space split={<Divider type="vertical" />}>
+                <Select
+                  value={pulseGranularity}
+                  onChange={(val) => setPulseGranularity(val)}
+                  size="small"
+                  style={{ width: 100 }}
+                  options={[
+                     { label: 'Daily', value: 'day' },
+                     { label: 'Weekly', value: 'week' },
+                     { label: 'Monthly', value: 'month' },
+                  ]}
+                />
+                <Select
+                  value={pulsePersona}
+                  onChange={(val) => setPulsePersona(val)}
+                  size="small"
+                  style={{ width: 140 }}
+                  options={personaOptions}
+                />
+              </Space>
+            </Space>
+          </Divider>
+          
+          <ProCard
+            style={{ ...CARD_STYLE, marginBottom: 16, background: '#fff' }}
+            title={
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                    {pulseGranularity === 'day' ? 'Last 30 Days' : 'Current Year Breakdown'}
+                    {pulsePersona !== 'All' && ` • ${PERSONA_SHORT_NAMES[pulsePersona] || pulsePersona}`}
+                </Text>
+            }
+            extra={<Text strong>{formatHours(pulseAvg)}h / {pulseGranularity} avg</Text>}
+            bodyStyle={{ padding: '16px 24px 8px' }}
+          >
+            <Column
+              data={pulseData}
+              xField="date"
+              yField="hours"
+              seriesField="persona"
+              isStack={true}
+              height={180}
+              colorField="persona" // CRITICAL: Required for correct coloring in grouped/stacked charts
+              color={(datum: any) => {
+                 // Inspect input (string or object)
+                 let pName = '';
+                 if (typeof datum === 'string') {
+                   pName = datum;
+                 } else if (datum && datum.persona) {
+                   pName = datum.persona;
+                 }
+                 
+                 const fullPersona = Object.keys(PERSONA_SHORT_NAMES).find(key => PERSONA_SHORT_NAMES[key] === pName) || pName;
+                 return PERSONA_COLORS[fullPersona] || PERSONA_COLORS[pName] || '#888';
+              }}
+              columnWidthRatio={0.6}
+              xAxis={{
+                label: { autoRotate: false, style: { fontSize: 10 } },
+              }}
+              yAxis={{
+                grid: { line: { style: { stroke: '#f0f0f0', lineDash: [2, 2] } } },
+              }}
+              legend={{
+                position: 'top-left',
+                itemName: { style: { fontSize: 11 } },
+                marker: { symbol: 'circle' }
+              }}
+              tooltip={{
+                // G2 v5 API Standard
+                title: (datum: any) => datum.date,
+                items: [
+                  (datum: any) => ({
+                    name: datum.persona,
+                    value: `${datum.hours}h`,
+                  })
+                ]
+              }}
+            />
+          </ProCard>
+        </React.Fragment>
+      )}
+
       {/* Charts Row */}
       <Row gutter={[20, 20]} style={{ marginTop: 20 }}>
         {/* Persona Pie Chart - SPIDER LABELS with % and hours visible */}
@@ -227,7 +394,7 @@ const PersonametryDashboard: React.FC = () => {
                 <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>(excl. sleep)</Text>
               </span>
             }
-            style={{ ...CARD_STYLE, height: 420 }}
+            style={{ ...CARD_STYLE, height: 360 }}
           >
             <Row gutter={16}>
               {/* Pie Chart */}
@@ -238,7 +405,7 @@ const PersonametryDashboard: React.FC = () => {
                   colorField="type"
                   radius={0.9}
                   innerRadius={0}
-                  height={300}
+                  height={260}
                   scale={{ color: { range: pieColorPalette } }}
                   label={false}
                   legend={false}
@@ -257,7 +424,7 @@ const PersonametryDashboard: React.FC = () => {
               </Col>
               {/* Custom Legend Table */}
               <Col span={12}>
-                <div style={{ paddingTop: 20 }}>
+                <div style={{ paddingTop: 10 }}>
                   {pieData.map((item) => {
                     return (
                       <div 
@@ -266,17 +433,17 @@ const PersonametryDashboard: React.FC = () => {
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'space-between',
-                          padding: '6px 0',
+                          padding: '4px 0',
                           borderBottom: '1px solid #f0f0f0',
                         }}
                       >
                         <Space size={8}>
                           <div style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: item.color }} />
-                          <Text style={{ fontSize: 13 }}>{item.type}</Text>
+                          <Text style={{ fontSize: 12 }}>{item.type}</Text>
                         </Space>
-                        <Space size={12}>
-                          <Text strong style={{ fontSize: 13, minWidth: 40, textAlign: 'right' }}>{item.percentage}%</Text>
-                          <Text type="secondary" style={{ fontSize: 12, minWidth: 50, textAlign: 'right' }}>{formatHours(item.value)}h</Text>
+                        <Space size={8}>
+                          <Text strong style={{ fontSize: 12, minWidth: 36, textAlign: 'right' }}>{item.percentage}%</Text>
+                          <Text type="secondary" style={{ fontSize: 11, minWidth: 40, textAlign: 'right' }}>{formatHours(item.value)}h</Text>
                         </Space>
                       </div>
                     );
@@ -296,13 +463,13 @@ const PersonametryDashboard: React.FC = () => {
                 <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>(excl. sleep)</Text>
               </span>
             }
-            style={{ ...CARD_STYLE, height: 420 }}
+            style={{ ...CARD_STYLE, height: 360 }}
           >
             <Column
               data={monthlyBarData}
               xField="month"
               yField="hours"
-              height={320}
+              height={260}
               color={isAllTime ? '#0D7377' : (YEAR_COLORS[selectedYear as number] || '#0D7377')}
               columnWidthRatio={0.6}
               label={isAllTime ? false : {

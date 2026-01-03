@@ -250,3 +250,37 @@ Constraints   Personas                Personas
 - [2022: Diving Deeper with Analytics](https://khanmjk-outlet.blogspot.com/2022/01/diving-deeper-with-personal-analytics.html)
 - [2016: RAGE Model](https://khanmjk-outlet.blogspot.com/2016/02/my-rage-model-for-personal-development.html)
 - [2015: Personal Metrics - The Next Big Thing?](https://khanmjk-outlet.blogspot.com/2015/10/personal-metrics-leading-to-self-aware.html)
+
+---
+
+## Technical Feasibility: Harvest API Analysis
+
+### Research Objective
+
+Determine if a simpler "Current Month" API endpoint exists to replace or augment the "7-Day Lookback" incremental sync strategy.
+
+### API Options Evaluated
+
+| Endpoint                      | Description                | Pros                                                                              | Cons                                                                                 |
+| :---------------------------- | :------------------------- | :-------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------- |
+| **`v2/time_entries`**         | Granular time entry list   | Contains ALL fields (Notes, Start/End, Task IDs). Supports `from`/`to` filtering. | Requires pagination for large ranges.                                                |
+| **`v2/reports/time/clients`** | Aggregated hours by client | Simple summary. Fast.                                                             | **Lacks Details**: No Notes, No Start/End times. Useless for Persona classification. |
+| **`v2/user_assignments`**     | Project assignment list    | Good for project metadata.                                                        | Does not contain time entries or hours logged.                                       |
+
+### Strategy Comparison
+
+#### Option A: Incremental Sync (Current)
+
+- **Logic**: Fetch `[Last Sync] - 7 Days`.
+- **Pros**: Constant API cost (always ~1 page). Scalable indefinitely.
+- **Cons**: Requires local state (JSON file) to know "Last Sync".
+
+#### Option B: "Current Month" Fetch
+
+- **Logic**: Fetch `from=YYYY-MM-01` to `to=YYYY-MM-DD`.
+- **Pros**: Stateless (doesn't care about last sync). Self-correcting for the whole month.
+- **Cons**: API cost grows linearly. On Jan 31st, we fetch 31 days (multiple pages) every time.
+
+### Recommendation
+
+**Stick with Option A (v2/time_entries + Incremental)** for automation efficiency. However, for "Analysis Mode" or debugging, Option B is fully supported by the API and can be manually triggered by simple URL checks.

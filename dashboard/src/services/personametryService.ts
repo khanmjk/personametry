@@ -216,6 +216,106 @@ export function groupByMonth(entries: TimeEntry[]): MonthlyTrend[] {
   });
 }
 
+// ============================================
+// DAILY / WEEKLY AGGREGATIONS
+// ============================================
+
+export interface DailySummary {
+  date: string;
+  totalHours: number;
+  byPersona: Record<string, number>; // hours per persona
+}
+
+/**
+ * Group entries by day (for stacked bar charts)
+ */
+export function groupByDay(entries: TimeEntry[]): DailySummary[] {
+  const dailyMap = new Map<string, DailySummary>();
+  
+  for (const entry of entries) {
+    const date = entry.date;
+    const existing = dailyMap.get(date) || { date, totalHours: 0, byPersona: {} };
+    
+    existing.totalHours += entry.hours;
+    const persona = getPersonaShortName(entry.prioritisedPersona);
+    existing.byPersona[persona] = (existing.byPersona[persona] || 0) + entry.hours;
+    
+    dailyMap.set(date, existing);
+  }
+  
+  return Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Generic grouping by period (Day, Week, Month) with Persona Breakdown
+ * Used for Stacked Bar Charts
+ */
+export function groupEntriesByPeriod(
+  entries: TimeEntry[], 
+  period: 'day' | 'week' | 'month'
+): DailySummary[] { // Reusing DailySummary interface as it has the right shape { date, totalHours, byPersona }
+  const map = new Map<string, DailySummary>();
+
+  for (const entry of entries) {
+    let key = '';
+    let sortDate = ''; // ISO-like string for sorting
+
+    const d = dayjs(entry.date);
+
+    if (period === 'day') {
+      key = entry.date; // YYYY-MM-DD
+      sortDate = key;
+    } else if (period === 'week') {
+      const year = d.isoWeekYear();
+      const week = d.isoWeek();
+      key = `W${week} (${year})`; // Display Label
+      sortDate = `${year}-W${week.toString().padStart(2, '0')}`; // Sort Key
+    } else if (period === 'month') {
+      key = d.format('MMM YYYY');
+      sortDate = d.format('YYYY-MM');
+    }
+
+    // Use sortDate as map key to ensure unique buckets even if display label is same (unlikely but safe)
+    // Actually, we need to return 'date' field as the display label for the chart x-axis OR keep separate.
+    // Let's use the 'date' field for the X-AXIS Label.
+    
+    // We'll map by SORT KEY first to aggregate correctly across years if needed (though usually we filter by year first)
+    const uniqueKey = sortDate; 
+
+    const existing = map.get(uniqueKey) || { 
+      date: key, // This will be the X-Axis Label
+      totalHours: 0, 
+      byPersona: {} 
+    };
+
+    existing.totalHours += entry.hours;
+    const persona = getPersonaShortName(entry.prioritisedPersona);
+    existing.byPersona[persona] = (existing.byPersona[persona] || 0) + entry.hours;
+
+    map.set(uniqueKey, existing);
+  }
+
+  // Sort by the map keys (which are ISO-formatted)
+  return Array.from(map.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([, summary]) => summary);
+}
+
+/**
+ * Get entries for the last N days (relative to today or last entry date)
+ */
+export function getLastNDays(entries: TimeEntry[], days: number = 30): TimeEntry[] {
+  if (entries.length === 0) return [];
+  
+  // Determine reference date: Use today, but fallback to last entry if data is historical
+  // Actuallly, "Overvew" usually implies "Current context".
+  // Let's use Real Today.
+  const today = dayjs();
+  const cutoff = today.subtract(days, 'day').format('YYYY-MM-DD');
+  
+  return entries.filter(e => e.date >= cutoff);
+}
+
 /**
  * Group entries by week within a year
  */
