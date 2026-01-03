@@ -220,8 +220,11 @@ const PersonametryDashboard: React.FC = () => {
   if (isAllTime) {
     averageDivisor = totalDaysAllTime;
   } else if (isCurrentYear) {
-    // For current year, use days elapsed so far
-    averageDivisor = dayjs().dayOfYear();
+    // For current year, use fractional days elapsed for accurate run rate
+    // e.g. Jan 3rd 12pm = 2.5 days, not 3 days
+    const hoursElapsed = dayjs().diff(dayjs().startOf('year'), 'hour', true);
+    // Ensure we don't divide by zero at the very start of the year
+    averageDivisor = Math.max(0.1, hoursElapsed / 24);
   } else {
      // For past years check for leap year
      averageDivisor = dayjs(`${selectedYear}-01-01`).isLeapYear() ? 366 : 365;

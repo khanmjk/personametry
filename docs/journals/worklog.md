@@ -721,5 +721,5 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 
 - **Bug Fix**: Incorrect "Avg. Hours/Day" Calculation
   - **Issue**: "Avg. Hours/Day" for 2026 was showing `0.1 hrs` (calculating `38.0 / 365`).
-  - **Fix**: Updated logic to use `dayjs().dayOfYear()` (days elapsed so far) when viewing the current year.
-  - **Outcome**: Value corrected to `12.7 hrs` (calculating `38.0 / 3`).
+  - **Refinement**: Switched from integer `dayOfYear()` (3 days) to fractional `hoursElapsed` (2.26 days) for precise run-rate.
+  - **Outcome**: Value corrected to `16.8 hrs` (excl sleep) / `21.3 hrs` (incl sleep).
