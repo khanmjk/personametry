@@ -1066,3 +1066,13 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Fix**: Updated `Sleep/index.tsx` to use `dayjs().dayOfYear()` (days elapsed) as the divisor when the selected year is the current year.
 - **Result**: Average now correctly reflects "hours per day _so far_".
 - **Verification**: Verified by user.
+
+### 15:20 - UX/Robustness: Work Patterns Page ✅
+
+- **Objective**: Improve robustness for empty years and reduce visual noise.
+- **Changes**:
+  - **Empty State**: Implemented graceful handling for years with no data (e.g., 2026). Shows friendly "Enjoy the break! 🏖️" message and hides empty charts.
+  - **Context-Aware Heatmap**: Updated `WorkHeatmap` to filter data based on context.
+    - **Specific Year**: Shows single column for selected year.
+    - **All Time**: Shows full multi-year history.
+- **Result**: Cleaner, bug-free experience when navigating to future/empty years.

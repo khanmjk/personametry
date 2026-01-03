@@ -75,6 +75,9 @@ const WorkPage: React.FC = () => {
   // Display suffix
   const titleSuffix = isAllTime ? 'All Time' : selectedYear.toString();
 
+  // Check if we have data for the selected context
+  const hasData = yearAnalysis.stats.avgDailyHours > 0 || yearAnalysis.stats.totalLateDays > 0;
+
   return (
     <PageContainer
       header={{
@@ -95,7 +98,7 @@ const WorkPage: React.FC = () => {
               title={`Late Days ${isAllTime ? '(All Time)' : `in ${selectedYear}`} (> 7 PM)`}
               value={yearAnalysis.stats.totalLateDays}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#cf1322' }}
+              valueStyle={{ color: hasData ? '#cf1322' : '#999' }}
             />
           </Card>
         </Col>
@@ -105,7 +108,7 @@ const WorkPage: React.FC = () => {
               title={`Max Streak ${isAllTime ? '(All Time)' : `in ${selectedYear}`} (Days)`}
               value={yearAnalysis.stats.maxStreakLength}
               prefix={<FireOutlined />}
-              valueStyle={{ color: '#d48806' }}
+              valueStyle={{ color: hasData ? '#d48806' : '#999' }}
             />
           </Card>
         </Col>
@@ -117,35 +120,58 @@ const WorkPage: React.FC = () => {
               precision={1}
               prefix={<ThunderboltOutlined />}
               suffix="h"
+              valueStyle={{ color: hasData ? '#000' : '#999' }}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Main Heatmap Row (History - always shows all years) */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col span={24}>
-          <WorkHeatmap data={fullAnalysis.workIntensityHeatmap} height={480} />
-        </Col>
-      </Row>
+      {/* Empty State Message */}
+      {!hasData && (
+        <Row style={{ marginBottom: 24 }}>
+          <Col span={24}>
+            <Card>
+               <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                 <ClockCircleOutlined style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }} />
+                 <p style={{ fontSize: 16 }}>No work entries found for {selectedYear}.</p>
+                 <p style={{ fontSize: 14 }}>Enjoy the break! 🏖️</p>
+               </div>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Main Heatmap Row (Filtered by Year unless All Time) */}
+      {hasData && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col span={24}>
+            <WorkHeatmap 
+              data={isAllTime ? fullAnalysis.workIntensityHeatmap : yearAnalysis.workIntensityHeatmap} 
+              height={480} 
+            />
+          </Col>
+        </Row>
+      )}
 
       {/* Detailed Analysis Row (Year Specific or All Time) */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={12}>
-          <LateNightChart data={yearAnalysis.lateDayFrequency.byDayOfWeek} height={350} />
-        </Col>
-        <Col xs={24} md={12}>
-          {yearAnalysis && (
-            <StreakHistogram 
-              data={[
-                ...yearAnalysis.workloadStreaks.highWorkload.map(s => ({ value: s.length, type: 'High Workload (>10h)' })),
-                ...yearAnalysis.workloadStreaks.lateEnd.map(s => ({ value: s.length, type: 'Late End (>9pm)' }))
-              ]} 
-              height={350} 
-            />
-          )}
-        </Col>
-      </Row>
+      {hasData && (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={12}>
+            <LateNightChart data={yearAnalysis.lateDayFrequency.byDayOfWeek} height={350} />
+          </Col>
+          <Col xs={24} md={12}>
+            {yearAnalysis && (
+              <StreakHistogram 
+                data={[
+                  ...yearAnalysis.workloadStreaks.highWorkload.map(s => ({ value: s.length, type: 'High Workload (>10h)' })),
+                  ...yearAnalysis.workloadStreaks.lateEnd.map(s => ({ value: s.length, type: 'Late End (>9pm)' }))
+                ]} 
+                height={350} 
+              />
+            )}
+          </Col>
+        </Row>
+      )}
     </PageContainer>
   );
 };
