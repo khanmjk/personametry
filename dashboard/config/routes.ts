@@ -76,6 +76,12 @@ export default [
     icon: 'experiment',
     component: './Playground',
   },
+  {
+      path: '/machine-learning',
+      name: 'Machine Learning',
+      icon: 'robot', 
+      component: './MachineLearning',
+  },
   // Home redirect
   {
     path: '/',

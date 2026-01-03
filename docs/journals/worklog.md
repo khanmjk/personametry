@@ -726,6 +726,68 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Outcome**: Value corrected to `16.8 hrs` (excl sleep) / `21.3 hrs` (incl sleep).
 
 - **UI Enhancement**: Hours in "Top 3 Personas" Card
+
   - **Request**: Display hours alongside percentages for better context.
   - **Implementation**: Updated card to show `25.2h` (secondary text) next to `66.3%` (primary text).
   - **Outcome**: Improved data readability without cluttering the layout.
+
+- **Design Phase**: Machine Learning Recommendations (v2.0)
+  - **Objective**: Design a prescriptive analytics engine for 2026 planning.
+  - **Outcome**: Created `/docs/ml-recommendation-design.md` detailing:
+    - **Temporal Engine**: Holt-Winters Forecasting for seasonality.
+    - **Optimization Engine**: Goal Programming with soft constraints.
+    - **Behavioral Intelligence**: "Readiness Score" integration.
+
+### 07:15 - Restart Dev Server & Sync Data
+
+- **Action**: Ran `/restart-dev` workflow to refresh environment.
+- **Data Sync**: Copied fresh `timeentries_harvest.json` from `data/processed/` to `dashboard/public/data/` as per updated workflow.
+- **Verification**:
+  - Server started on port 8000.
+  - Dashboard verified via browser screenshot and automated checks.
+  - Confirmed 2026 data is loaded and visible.
+
+### 07:45 - Machine Learning Refinements (v2.2 & v2.3) ✅
+
+- **Refined Priorities (v2.2 Impact)**:
+
+  - **Husband Focus**: Added dedicated optimization target (P4).
+  - **Health & Self**: Repurposed "Me Time" to explicitly prioritize health.
+  - **Social**: Removed from active optimization to focus on core family/health pillars.
+  - **Simplicity**: Moved "Realism Shortcuts" (Sleep, Contract) to dedicated section.
+
+- **Logic Fix: "Zero Baseline" Problem (v2.3)**:
+
+  - **Issue**: Sliders for new habits (like Husband Focus) had no effect if historical baseline was 0h.
+  - **Fix**: Implemented `ensureBaseline` helper. If baseline < 5h, optimization assumes a 5h floor before applying growth multiplier.
+  - **Result**: Users can now optimize for _brand new_ habits effectively.
+
+- **Performance Optimization ⚡️**:
+
+  - **Issue**: UI lag when dragging sliders.
+  - **Root Cause**: Re-running heavy Holt-Winters forecasting (10 years of history) on every React render frame.
+  - **Fix**: Decoupled `prepareBaselines()` (Heavy, Run Once) from `optimizeProfile()` (Light, Run on Drag).
+  - **Outcome**: Instant, smooth slider interaction.
+
+- **Verification**:
+
+  - Created `verify_v2_3.ts` standalone script to mathematically verify logic fixes.
+  - Created `OptimizationService.test.ts` (Jest) for long-term regression testing.
+  - Browser verification confirmed UI responsiveness.
+
+- **Logic Fix: "Reversed Slider" Bug (v2.4)**:
+
+  - **Issue**: "Health" slider appeared broken or reversed when Readiness Score was low.
+  - **Root Cause**: The formula `Baseline * Growth * Ambition` meant that a low ambition (0.5) penalized growth. Trying to grow by 50% (1.5) resulted in `1.5 * 0.5 = 0.75` (25% reduction!).
+  - **Fix**: Changed to "Damped Growth" formula: `Base + (Base * GrowthDelta * Ambition)`.
+  - **Result**: Sliders now always increase the target, but the _rate_ of increases is slower when burnt out.
+
+- **UX Refinement: Slider Scales (v2.4)**:
+
+  - **Issue**: User confused by side-label "160h" looking like a Max Range label.
+  - **Fix**: Moved value to Header (e.g., "Work Cap: 180h"). Added explicit `0h` and `250h` marks to slider track.
+  - **Result**: Contract/Work sliders now clearly show they operate on the same 0-250 universal scale.
+
+- **Chart Visualization (v2.5 - In Progress)**:
+  - **Goal**: Tri-Layer Radar (2025 Actuals, 2026 Forecast, 2026 Optimized).
+  - **Status**: Data is present (3 layers visible), but Legend is missing and colors are incorrect (all blue). Debugging G2Plot configuration.
