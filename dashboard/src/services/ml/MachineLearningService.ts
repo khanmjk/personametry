@@ -10,9 +10,13 @@ dayjs.extend(isoWeek);
 
 export interface MLResult {
   persona: string;
-  forecast2026: ForecastResult;
-  history2025: number[]; 
+  forecastNextYear: ForecastResult;
+  historyPreviousYear: number[]; 
 }
+
+// Dynamic Year Helpers
+const getCurrentYear = () => dayjs().year();
+const getPreviousYear = () => dayjs().year() - 1;
 
 export interface RecommendationResult {
     forecasts: Record<string, ForecastResult>;
@@ -38,7 +42,9 @@ export class MachineLearningService {
    * Phase 1: Heavy Computation (Run once on mount)
    * Calculates 2026 Forecasts and Readiness from History
    */
-  public prepareBaselines(entries: TimeEntry[]): { forecasts: Record<string, ForecastResult>; history2025: Record<string, number>; readinessScore: number } {
+  public prepareBaselines(entries: TimeEntry[]): { forecasts: Record<string, ForecastResult>; historyPreviousYear: Record<string, number>; readinessScore: number; previousYear: number; currentYear: number } {
+      const previousYear = getPreviousYear();
+      const currentYear = getCurrentYear();
       const forecasts: Record<string, ForecastResult> = {};
       // Corrected strings to match actual data
       const relevantPersonas = ['P0 Life Constraints (Sleep)', 'P1 Muslim', 'P2 Individual', 'P3 Professional', 'P5 Family', 'P6 Friend Social'];
@@ -61,27 +67,27 @@ export class MachineLearningService {
       }
 
 
-      // 2. Calculate 2025 Baselines (Actual History) for Comparison
-      const history2025: Record<string, number> = {};
+      // 2. Calculate Previous Year Baselines (Actual History) for Comparison
+      const historyPreviousYear: Record<string, number> = {};
       relevantPersonas.forEach(p => {
           const { history, labels } = this.extractMonthlyTimeSeries(entries, p);
-          const yearlySlice = this.extractYearlySlice(history, labels, 2025);
-          // Average the 2025 monthly data
+          const yearlySlice = this.extractYearlySlice(history, labels, previousYear);
+          // Average the previous year monthly data
           const sum = yearlySlice.reduce((a, b) => a + b, 0);
-          history2025[p] = yearlySlice.length > 0 ? sum / yearlySlice.length : 0;
+          historyPreviousYear[p] = yearlySlice.length > 0 ? sum / yearlySlice.length : 0;
       });
 
       // --- Sabbatical Logic (P3 Professional) ---
-      // If 2025 Work average is < 120h/mo (Sabbatical), use 2021-2024 average for 2026 Forecast
+      // If previous year Work average is < 120h/mo (Sabbatical), use 4-year average for Forecast
       const p3Work = 'P3 Professional';
-      const p3Avg2025 = history2025[p3Work] || 0;
+      const p3AvgPrevYear = historyPreviousYear[p3Work] || 0;
       
-      if (p3Avg2025 < 120 && forecasts[p3Work]) {
+      if (p3AvgPrevYear < 120 && forecasts[p3Work]) {
           const { history, labels } = this.extractMonthlyTimeSeries(entries, p3Work);
           
-          // Calculate 4-Year Average (2021, 2022, 2023, 2024)
-          // Note: using 2021-2024 to smooth out 2024 peak and 2025 dip
-          const years = [2021, 2022, 2023, 2024];
+          // Calculate 4-Year Average (years before previous year)
+          // This smooths out any anomalies in the immediate prior years
+          const years = [previousYear - 4, previousYear - 3, previousYear - 2, previousYear - 1];
           let totalSum = 0;
           let totalCount = 0;
 
@@ -108,7 +114,7 @@ export class MachineLearningService {
       const last30Days = entries.filter(e => dayjs(e.date).isAfter(dayjs().subtract(30, 'day')));
       const readinessScore = this.readinessEngine.calculateReadiness(last30Days);
 
-      return { forecasts, history2025, readinessScore };
+      return { forecasts, historyPreviousYear, readinessScore, previousYear, currentYear };
   }
 
   /**
@@ -144,21 +150,23 @@ export class MachineLearningService {
    * Generates single persona forecast (Used for UI detailed charts)
    */
   public generateForecast(entries: TimeEntry[], persona: string): MLResult {
+    const previousYear = getPreviousYear();
     const { history, labels } = this.extractMonthlyTimeSeries(entries, persona);
     const result = this.forecaster.forecast(history, 12);
-    const history2025 = this.extractYearlySlice(history, labels, 2025);
+    const historyPreviousYear = this.extractYearlySlice(history, labels, previousYear);
 
     return {
       persona,
-      forecast2026: result,
-      history2025
+      forecastNextYear: result,
+      historyPreviousYear
     };
   }
 
   private extractMonthlyTimeSeries(entries: TimeEntry[], persona: string) {
+    const previousYear = getPreviousYear();
     const relevantEntries = entries.filter(e => e.prioritisedPersona === persona);
     let current = dayjs('2015-01-01');
-    const end = dayjs('2025-12-31');
+    const end = dayjs(`${previousYear}-12-31`); // Dynamic: end at previous year
     
     const history: number[] = [];
     const labels: string[] = [];

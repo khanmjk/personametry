@@ -16,7 +16,7 @@ const MachineLearningPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   // Cached Forecasts (Heavy Prep)
-  const [baselines, setBaselines] = useState<{forecasts: any, history2025: Record<string, number>, readinessScore: number} | null>(null);
+  const [baselines, setBaselines] = useState<{forecasts: any, historyPreviousYear: Record<string, number>, readinessScore: number, previousYear: number, currentYear: number} | null>(null);
   // Live Result
   const [result, setResult] = useState<RecommendationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,40 +102,44 @@ const MachineLearningPage: React.FC = () => {
       return f ? f.forecast.reduce((a, b) => a + b, 0) / 12 : 0; // Forecasting 2026
   };
   
-  const get2025History = (key: string): number => {
-      return baselines?.history2025[key] || 0;
+  const getPreviousYearHistory = (key: string): number => {
+      return baselines?.historyPreviousYear[key] || 0;
   };
 
+  // Dynamic year labels
+  const prevYear = baselines?.previousYear || new Date().getFullYear() - 1;
+  const currYear = baselines?.currentYear || new Date().getFullYear();
+
   // Data for Radar Chart - 3 Layers
-  // Order: 2025 (Grey) -> Forecast (Blue) -> Optimized (Green)
+  // Order: Previous Year (Grey) -> Forecast (Blue) -> Optimized (Green)
   const rawData = [
-      { name: 'Work', type: '2025 Actual', value: get2025History('P3 Professional') },
-      { name: 'Work', type: '2026 Forecast', value: getBaseline('P3 Professional') },
-      { name: 'Work', type: '2026 Optimized', value: result.optimizedProfile.work },
+      { name: 'Work', type: `${prevYear} Actual`, value: getPreviousYearHistory('P3 Professional') },
+      { name: 'Work', type: `${currYear} Forecast`, value: getBaseline('P3 Professional') },
+      { name: 'Work', type: `${currYear} Optimized`, value: result.optimizedProfile.work },
       
-      { name: 'Sleep', type: '2025 Actual', value: get2025History('P0 Life Constraints (Sleep)') },
-      { name: 'Sleep', type: '2026 Forecast', value: getBaseline('P0 Life Constraints (Sleep)') },
-      { name: 'Sleep', type: '2026 Optimized', value: result.optimizedProfile.sleep },
+      { name: 'Sleep', type: `${prevYear} Actual`, value: getPreviousYearHistory('P0 Life Constraints (Sleep)') },
+      { name: 'Sleep', type: `${currYear} Forecast`, value: getBaseline('P0 Life Constraints (Sleep)') },
+      { name: 'Sleep', type: `${currYear} Optimized`, value: result.optimizedProfile.sleep },
       
-      { name: 'Family', type: '2025 Actual', value: get2025History('P5 Family') },
-      { name: 'Family', type: '2026 Forecast', value: getBaseline('P5 Family') },
-      { name: 'Family', type: '2026 Optimized', value: result.optimizedProfile.family },
+      { name: 'Family', type: `${prevYear} Actual`, value: getPreviousYearHistory('P5 Family') },
+      { name: 'Family', type: `${currYear} Forecast`, value: getBaseline('P5 Family') },
+      { name: 'Family', type: `${currYear} Optimized`, value: result.optimizedProfile.family },
       
-      { name: 'Husband', type: '2025 Actual', value: get2025History('P4 Husband') },
-      { name: 'Husband', type: '2026 Forecast', value: getBaseline('P4 Husband') },
-      { name: 'Husband', type: '2026 Optimized', value: result.optimizedProfile.husband },
+      { name: 'Husband', type: `${prevYear} Actual`, value: getPreviousYearHistory('P4 Husband') },
+      { name: 'Husband', type: `${currYear} Forecast`, value: getBaseline('P4 Husband') },
+      { name: 'Husband', type: `${currYear} Optimized`, value: result.optimizedProfile.husband },
 
-      { name: 'Health', type: '2025 Actual', value: get2025History('P2 Individual') },
-      { name: 'Health', type: '2026 Forecast', value: getBaseline('P2 Individual') },
-      { name: 'Health', type: '2026 Optimized', value: result.optimizedProfile.individual },
+      { name: 'Health', type: `${prevYear} Actual`, value: getPreviousYearHistory('P2 Individual') },
+      { name: 'Health', type: `${currYear} Forecast`, value: getBaseline('P2 Individual') },
+      { name: 'Health', type: `${currYear} Optimized`, value: result.optimizedProfile.individual },
 
-      { name: 'Spiritual', type: '2025 Actual', value: get2025History('P1 Muslim') },
-      { name: 'Spiritual', type: '2026 Forecast', value: getBaseline('P1 Muslim') },
-      { name: 'Spiritual', type: '2026 Optimized', value: result.optimizedProfile.spiritual },
+      { name: 'Spiritual', type: `${prevYear} Actual`, value: getPreviousYearHistory('P1 Muslim') },
+      { name: 'Spiritual', type: `${currYear} Forecast`, value: getBaseline('P1 Muslim') },
+      { name: 'Spiritual', type: `${currYear} Optimized`, value: result.optimizedProfile.spiritual },
   ];
 
   // Specific Sort Order for Legend/Color Consistency
-  const sortOrder = ['2025 Actual', '2026 Forecast', '2026 Optimized'];
+  const sortOrder = [`${prevYear} Actual`, `${currYear} Forecast`, `${currYear} Optimized`];
   const radarData = rawData.sort((a, b) => sortOrder.indexOf(a.type) - sortOrder.indexOf(b.type));
 
   return (
@@ -153,8 +157,8 @@ const MachineLearningPage: React.FC = () => {
                        <Collapse ghost>
                            <Panel header="How it works (Click to expand)" key="1">
                                <ul>
-                                   <li><strong>The Oracle (Forecast)</strong>: Uses Holt-Winters smoothing to predict your "Business as Usual" for 2026 based on seasonal patterns.</li>
-                                   <li><strong>The Solver (Optimization)</strong>: Uses Goal Programming to find the mathematically perfect schedule that meets your constraints (Work Contract, Sleep Targets) while maximizing your Growth Goals.</li>
+                                   <li><strong>The Oracle (Forecast)</strong>: Uses <a href="https://otexts.com/fpp3/holt-winters.html" target="_blank" rel="noopener noreferrer">Holt-Winters smoothing</a> to predict your "Business as Usual" for {currYear} based on seasonal patterns.</li>
+                                   <li><strong>The Solver (Optimization)</strong>: Uses <a href="https://en.wikipedia.org/wiki/Goal_programming" target="_blank" rel="noopener noreferrer">Goal Programming</a> to find the mathematically perfect schedule that meets your constraints (Work Contract, Sleep Targets) while maximizing your Growth Goals.</li>
                                    <li><strong>The Guardian (Readiness)</strong>: Monitors your recent sleep and burnout levels. If your Readiness Score is low, it automatically relaxes your growth targets to prevent crash.</li>
                                </ul>
                            </Panel>
@@ -247,7 +251,7 @@ const MachineLearningPage: React.FC = () => {
 
         {/* Section C: The Blueprint (Result) */}
         <Col xs={24} md={16}>
-             <Card title={<><ThunderboltOutlined /> The 2026 Optimized Profile</>} bordered={false}>
+             <Card title={<><ThunderboltOutlined /> The {currYear} Optimized Profile</>} bordered={false}>
                 <Row>
                     <Col span={24} style={{ height: 500 }}>
                         <Radar
@@ -279,7 +283,32 @@ const MachineLearningPage: React.FC = () => {
                     </Col>
                 </Row>
                 <Divider />
-                <Row gutter={16}>
+                <Row gutter={[16, 16]}>
+                    {/* Row 1: Work | Sleep | Spiritual */}
+                    {[
+                        { title: "Work Change", key: 'P3 Professional', target: result.optimizedProfile.work },
+                        { title: "Sleep Change", key: 'P0 Life Constraints (Sleep)', target: result.optimizedProfile.sleep },
+                        { title: "Spiritual Change", key: 'P1 Muslim', target: result.optimizedProfile.spiritual },
+                    ].map(stat => {
+                        const baseline = getBaseline(stat.key);
+                        const delta = Math.round(stat.target - baseline);
+                        const isPositive = delta >= 0;
+                        return (
+                            <Col span={8} key={stat.key}>
+                                <Statistic 
+                                    title={stat.title} 
+                                    value={delta} 
+                                    precision={0} 
+                                    valueStyle={{ color: isPositive ? '#3f8600' : '#cf1322' }} 
+                                    prefix={isPositive ? '+' : ''} 
+                                    suffix="hrs/mo" 
+                                />
+                            </Col>
+                        );
+                    })}
+                </Row>
+                <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+                    {/* Row 2: Health | Husband | Family */}
                     {[
                         { title: "Health Change", key: 'P2 Individual', target: result.optimizedProfile.individual },
                         { title: "Husband Change", key: 'P4 Husband', target: result.optimizedProfile.husband },
@@ -302,6 +331,38 @@ const MachineLearningPage: React.FC = () => {
                         );
                     })}
                 </Row>
+
+                {/* Narrative Section: Your Game Plan */}
+                <Divider>Your {currYear} Game Plan</Divider>
+                <Alert
+                    type="info"
+                    showIcon
+                    icon={<InfoCircleOutlined />}
+                    message={<Text strong>What's Different This Year?</Text>}
+                    description={
+                        <ul style={{ margin: 0, paddingLeft: 20 }}>
+                            {(() => {
+                                const insights: React.ReactNode[] = [];
+                                const workDelta = Math.round(result.optimizedProfile.work - getBaseline('P3 Professional'));
+                                const sleepDelta = Math.round(result.optimizedProfile.sleep - getBaseline('P0 Life Constraints (Sleep)'));
+                                const husbandDelta = Math.round(result.optimizedProfile.husband - getBaseline('P4 Husband'));
+                                const familyDelta = Math.round(result.optimizedProfile.family - getBaseline('P5 Family'));
+                                
+                                if (workDelta < -10) insights.push(<li key="work">📉 <strong>Work Reduction</strong>: You'll cut {Math.abs(workDelta)} hrs/mo from forecast. This frees capacity for growth areas.</li>);
+                                if (workDelta > 10) insights.push(<li key="work-up">📈 <strong>Work Increase</strong>: +{workDelta} hrs/mo from forecast. Ensure this aligns with your contract and health.</li>);
+                                if (sleepDelta < -15) insights.push(<li key="sleep">😴 <strong>Sleep Target Watch</strong>: Your optimized sleep is {Math.abs(sleepDelta)} hrs/mo below forecast. Consider adjusting your Target Sleep slider.</li>);
+                                if (husbandDelta > 5) insights.push(<li key="husband">❤️ <strong>Relationship Investment</strong>: +{husbandDelta} hrs/mo for Husband time. Consider scheduling regular date nights.</li>);
+                                if (familyDelta > 10) insights.push(<li key="family">👨‍👩‍👧 <strong>Family Priority</strong>: +{familyDelta} hrs/mo for Family. Block weekend mornings for quality time.</li>);
+                                if (familyDelta < -20) insights.push(<li key="family-down">⚠️ <strong>Family Time Reduction</strong>: -{Math.abs(familyDelta)} hrs/mo. Ensure this is intentional and discuss with family.</li>);
+                                
+                                if (insights.length === 0) {
+                                    insights.push(<li key="bal">✅ <strong>Balanced Profile</strong>: Your optimized plan is well-aligned with natural forecasts. Maintain current habits.</li>);
+                                }
+                                return insights;
+                            })()}
+                        </ul>
+                    }
+                />
              </Card>
         </Col>
       </Row>

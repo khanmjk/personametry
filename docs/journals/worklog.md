@@ -834,3 +834,32 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **User Insight**: "...should be using one master data source for all data features surely?"
 - **Fix**: Updated all 3 files to use the correct string: `"P0 Life Constraints (Sleep)"`.
 - **Future Recommendation**: Use the `Persona` enum from `models/personametry.ts` instead of hardcoded strings.
+
+### 10:35 - Key Indicators Expansion ✅
+
+- **Issue**: Only 3 personas shown below Radar chart (Health, Husband, Family).
+- **User Feedback**: Incomplete view - should show all 6 to align with Radar and RAGE model priorities.
+- **Fix**: Expanded to 2×3 grid layout:
+  - Row 1: Work | Sleep | Spiritual
+  - Row 2: Health | Husband | Family
+- **Each indicator shows**: Delta (hrs/mo) with color-coded green (+) / red (-).
+
+### 10:50 - ML Feature Enhancements ✅
+
+1. **Dynamic Years** (No Hardcoding):
+
+   - `MachineLearningService.ts`: Uses `dayjs().year()` for current/previous year.
+   - `MachineLearning/index.tsx`: All labels (e.g., "2025 Actual", "2026 Forecast") now use dynamic `{prevYear}` / `{currYear}`.
+   - **Next January**: Labels will auto-update to "2026 Actual" / "2027 Forecast".
+
+2. **Narrative Section** ("Your {Year} Game Plan"):
+   - Added auto-generated plain English insights below Radar chart.
+   - Insights include: Work Reduction, Relationship Investment, Family Priority, Sleep Watch, etc.
+   - Dynamically generated based on delta between Forecast vs Optimized values.
+
+### 10:58 - Algorithm Reference Links ✅
+
+- **UX Improvement**: Added hyperlinks to algorithm references in "How it works" section.
+- **Holt-Winters**: Links to [OTexts - Forecasting Principles & Practice](https://otexts.com/fpp3/holt-winters.html) (academic textbook).
+- **Goal Programming**: Links to [Wikipedia](https://en.wikipedia.org/wiki/Goal_programming) (accessible explanation).
+- **Benefit**: Users can now learn more about the algorithms powering the ML engine.
