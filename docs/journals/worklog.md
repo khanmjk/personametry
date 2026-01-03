@@ -1076,3 +1076,16 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
     - **Specific Year**: Shows single column for selected year.
     - **All Time**: Shows full multi-year history.
 - **Result**: Cleaner, bug-free experience when navigating to future/empty years.
+
+### 15:35 - Consolidation: Dashboard & Trends + Sleep Toggle ✅
+
+- **Objective**: Consolidate Trends reports into the main Dashboard and provide a global "Sleep Toggle".
+- **Changes**:
+  - **Sleep Toggle**: Added to global Dashboard header. Allows switching between "Work-Life Analysis" (excl. sleep) and "Whole Life Analysis" (incl. sleep).
+  - **Unified Logic**: Migrated `Trends` chart logic into `Dashboard`.
+  - **Layout Refinement**:
+    - **Row 3**: **Work-Life Balance** (Meta Categories) + **Time Distribution** (Persona Breakdown).
+    - **Row 4**: **Wheel of Life** (Radar) + **Year-over-Year Comparison** (Cards, Conditional).
+    - **Row 5**: Context-aware Trend Chart (**Monthly Bar** for Year, **Yearly Stacked** for All Time).
+  - **Cleanup**: Deleted `src/pages/Trends` and removed route.
+- **Result**: Single, powerful Overview with full control over data inclusion.

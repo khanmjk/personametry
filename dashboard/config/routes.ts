@@ -47,12 +47,7 @@ export default [
     icon: 'schedule',
     component: './Work',
   }, // P3
-  {
-    path: '/trends',
-    name: 'Trends',
-    icon: 'lineChart',
-    component: './Trends',
-  },
+
   {
     path: '/gains-losses',
     name: 'Gains/Losses',
