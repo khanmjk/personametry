@@ -321,9 +321,13 @@ def save_data(records):
 
     # PATH B: Dashboard Public Asset (Dual-Write for Local Dev support)
     # Allows 'git pull' to update the dev server immediately without ETL steps
-    dashboard_path = os.path.join(os.getcwd(), 'dashboard', 'public', 'data', 'timeentries_harvest.json')
+    # Use robust path resolution relative to this script (data/etl/harvest_api_sync.py)
+    # script dir (etl) -> parent (data) -> parent (root) -> dashboard...
+    root_dir = Path(__file__).resolve().parent.parent.parent
+    dashboard_path = root_dir / 'dashboard' / 'public' / 'data' / 'timeentries_harvest.json'
+    
     try:
-        os.makedirs(os.path.dirname(dashboard_path), exist_ok=True)
+        dashboard_path.parent.mkdir(parents=True, exist_ok=True)
         with open(dashboard_path, 'w') as f:
             json.dump(output, f, indent=2, default=str)
         print(f"✅ Synced to Dashboard Public: {dashboard_path}")
