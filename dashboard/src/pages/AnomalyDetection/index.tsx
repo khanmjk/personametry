@@ -109,7 +109,13 @@ const AnomalyDetectionPage: React.FC = () => {
     seriesField: 'type',
     smooth: true,
     animation: false, // Performance
-    color: ['#52c41a', '#1890ff'], // Actual (Green), Expected (Blue)
+    colorField: 'type',
+    scale: {
+        color: {
+            domain: ['Actual', 'Expected'],
+            range: ['#52c41a', '#1890ff'] // Green, Blue
+        }
+    },
     xAxis: {
         type: 'time',
         mask: 'MMM D'
@@ -128,9 +134,12 @@ const AnomalyDetectionPage: React.FC = () => {
     } as any)), // Type casting for older TS definitions if needed
     tooltip: {
         showMarkers: false,
-        formatter: (datum: ChartDataPoint) => {
-            return { name: datum.type, value: datum.value.toFixed(1) + 'h' };
-        }
+        items: [(datum: ChartDataPoint) => {
+            return { 
+                name: datum.type, 
+                value: datum.value?.toFixed(1) + 'h' 
+            };
+        }]
     }
   };
 
