@@ -18,6 +18,11 @@ import {
   FireOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import dayOfYear from 'dayjs/plugin/dayOfYear';
+import isLeapYear from 'dayjs/plugin/isLeapYear';
+
+dayjs.extend(dayOfYear);
+dayjs.extend(isLeapYear);
 import type { TimeEntry, DataMetadata } from '@/models/personametry';
 import { PERSONA_COLORS, PERSONA_SHORT_NAMES, YEAR_COLORS, STATUS_COLORS } from '@/models/personametry';
 import { useYear } from '@/contexts/YearContext';
@@ -210,6 +215,18 @@ const PersonametryDashboard: React.FC = () => {
     );
   }
 
+  // Calculate divisor for average
+  let averageDivisor = 365;
+  if (isAllTime) {
+    averageDivisor = totalDaysAllTime;
+  } else if (isCurrentYear) {
+    // For current year, use days elapsed so far
+    averageDivisor = dayjs().dayOfYear();
+  } else {
+     // For past years check for leap year
+     averageDivisor = dayjs(`${selectedYear}-01-01`).isLeapYear() ? 366 : 365;
+  }
+
   // Title shows year or "All Time"
   const titleSuffix = isAllTime ? 'All Time' : selectedYear.toString();
 
@@ -284,12 +301,12 @@ const PersonametryDashboard: React.FC = () => {
           <ProCard style={{ ...CARD_STYLE, height: 120 }}>
             <Statistic
               title={<Text strong>Avg. Hours/Day</Text>}
-              value={(totalHours / (isAllTime ? totalDaysAllTime : 365)).toFixed(1)}
+              value={(totalHours / averageDivisor).toFixed(1)}
               suffix="hrs"
               valueStyle={{ color: '#333', fontSize: 28, fontWeight: 600 }}
             />
             <Text type="secondary" style={{ fontSize: 11 }}>
-              (excl. sleep) • With sleep: {(totalHoursWithSleep / (isAllTime ? totalDaysAllTime : 365)).toFixed(1)}h/day
+              (excl. sleep) • With sleep: {(totalHoursWithSleep / averageDivisor).toFixed(1)}h/day
             </Text>
           </ProCard>
         </Col>

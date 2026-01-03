@@ -709,6 +709,7 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
     - Options: "All Personas" (Stacked Column) vs Specific Persona (Filtered View).
     - Logic: Filters `pulseData` and recalculates "Are Daily Hours" KPI dynamically.
 - **Bug Fix**: Pulse Card Disappearance
+
   - **Issue**: Selecting a specific persona caused the entire Pulse Card to unmount/vanish.
   - **Root Cause**:
     1. Mismatch between "Full Name" (Dropdown key) and "Short Name" (Data key).
@@ -717,3 +718,8 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
     1. Standardized dropdown values to use `PERSONA_SHORT_NAMES`.
     2. Removed the conditional visibility check on the parent component.
   - **Outcome**: Filter now works robustly for all personas, maintaining UI stability even with empty data.
+
+- **Bug Fix**: Incorrect "Avg. Hours/Day" Calculation
+  - **Issue**: "Avg. Hours/Day" for 2026 was showing `0.1 hrs` (calculating `38.0 / 365`).
+  - **Fix**: Updated logic to use `dayjs().dayOfYear()` (days elapsed so far) when viewing the current year.
+  - **Outcome**: Value corrected to `12.7 hrs` (calculating `38.0 / 3`).
