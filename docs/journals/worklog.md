@@ -816,6 +816,11 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **One-Time Cleanup**: Removed 130 duplicate legacy rows from `timeentries_harvest.json`, restoring 2025 totals to expected range.
 - **Residual Delta Found**: Traced remaining 2.71h mismatch to a true duplicate row in `harvest_time_report.xlsx` (Jan 2, 2025).
 
+### 12:58 - Menu Separator Rollback ✅
+
+- **Issue**: Menu separator experiment disrupted navigation.
+- **Resolution**: Reverted divider injection in `app.tsx` to restore normal menu click behavior.
+
 ### 09:50 - Data Accuracy Fixes (v2.6) ✅
 
 - **Sleep Data Fix**:
@@ -971,3 +976,11 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Solution**: Refactored `MachineLearningService` to include `prepareBaselinesAsync()`.
 - **Technique**: Used "Chunking" pattern. The engine now yields the main thread (`await new Promise(r => setTimeout(r, 0))`) after processing each persona's forecast and baseline.
 - **Outcome**: The browser remains responsive (no freeze dialog) while the engine crunches data, and the loading spinner animation stays fluid.
+
+### 12:55 - Restart Dev Server
+
+- **Action**: Ran `/restart-dev` workflow to refresh environment.
+- **Verification**:
+  - Validated process running.
+  - Validated HTTP 200 OK via curl.
+  - Validated dashboard load via screenshot (2026 data visible).

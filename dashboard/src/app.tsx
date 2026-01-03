@@ -4,7 +4,6 @@ import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
 import React from 'react';
-import { Divider } from 'antd';
 import {
   AvatarDropdown,
   AvatarName,
@@ -66,8 +65,6 @@ export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
 }) => {
-  const dividerPaths = new Set(['/playground', '/about']);
-
   return {
     // Center the global year selector in the header (hidden on Playground)
     actionsRender: () => {
@@ -94,19 +91,6 @@ export const layout: RunTimeLayoutConfig = ({
     bgLayoutImgList: [],
     // DISABLED: No dev links
     links: [],
-    menuItemRender: (item, defaultDom) => {
-      const itemPath = item.path || item.itemPath;
-      if (!itemPath || !dividerPaths.has(itemPath)) {
-        return defaultDom;
-      }
-
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <Divider style={{ margin: '6px 12px' }} />
-          {defaultDom}
-        </div>
-      );
-    },
     menuHeaderRender: undefined,
     // Children render - no extra wrapper needed, rootContainer handles provider
     childrenRender: (children) => {
