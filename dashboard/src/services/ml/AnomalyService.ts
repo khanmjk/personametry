@@ -31,7 +31,65 @@ export class AnomalyService {
       const statistical = this.detectStatisticalAnomalies(entries);
       // Behavioral (Burnout) can be added here
       
-      return [...structural, ...statistical].sort((a, b) => dayjs(b.date).unix() - dayjs(a.date).unix());
+      const allAnomalies = [...structural, ...statistical].sort((a, b) => dayjs(b.date).unix() - dayjs(a.date).unix());
+      return this.consolidateAnomalies(allAnomalies);
+  }
+
+  /**
+   * Group consecutive or similar anomalies into single "Incidents" to reduce noise.
+   */
+  private consolidateAnomalies(anomalies: Anomaly[]): Anomaly[] {
+      if (anomalies.length === 0) return [];
+
+      const consolidated: Anomaly[] = [];
+      // Sort by date ascending for grouping logic
+      const sorted = [...anomalies].sort((a, b) => dayjs(a.date).unix() - dayjs(b.date).unix());
+
+      let currentGroup: Anomaly[] = [sorted[0]];
+
+      for (let i = 1; i < sorted.length; i++) {
+          const prev = currentGroup[currentGroup.length - 1];
+          const curr = sorted[i];
+
+          // Check if similar enough to group:
+          // 1. Same Type, Category, Severity
+          // 2. Consecutive days (or within 2 days gap)
+          const isSameClass = prev.type === curr.type && prev.category === curr.category && prev.severity === curr.severity;
+          const daysDiff = dayjs(curr.date).diff(dayjs(prev.date), 'day');
+
+          if (isSameClass && daysDiff <= 2) {
+              currentGroup.push(curr);
+          } else {
+              // Flush current group
+              consolidated.push(this.mergeGroup(currentGroup));
+              currentGroup = [curr];
+          }
+      }
+      // Flush last group
+      consolidated.push(this.mergeGroup(currentGroup));
+
+      // Return sorted by date descending (newest first)
+      return consolidated.sort((a, b) => dayjs(b.date).unix() - dayjs(a.date).unix());
+  }
+
+  private mergeGroup(group: Anomaly[]): Anomaly {
+      if (group.length === 1) return group[0];
+
+      const first = group[0];
+      const last = group[group.length - 1];
+      const count = group.length;
+
+      // Calculate aggregated metrics
+      const totalValue = group.reduce((sum, a) => sum + (a.value || 0), 0);
+      const avgValue = totalValue / count;
+
+      return {
+          ...first,
+          date: `${first.date} to ${last.date}`, // Convert to range
+          description: `${first.type === 'Structural' ? 'Persistent Issue' : 'Pattern Detected'}: ${first.description.split(':')[0]} (${count} occurrences)`,
+          value: avgValue, // Representative value
+          score: group.length, // Use score to store count for UI
+      };
   }
 
   // ==========================================================
@@ -50,32 +108,24 @@ export class AnomalyService {
 
       // Check Checks
       Object.entries(dailyTotals).forEach(([date, total]) => {
-          // Rule 1: Impossible Day (> 24h)
-          if (total > 24) {
+          // Rule 1: "Impossible" Day (> 35h)
+          // Analysis shows P99.9 is 35.39h due to continuous tracking. 
+          // 24h is not the limit. 35h is the behavioral limit.
+          if (total > 35) {
               anomalies.push({
                   date,
                   type: 'Structural',
                   severity: 'Critical',
                   category: 'Data Integrity',
-                  description: `Impossible Daily Total: ${total.toFixed(0)} hours reported`,
-                  value: total,
-                  expected: 24
-              });
-          }
-          // Rule 2: Missing Day (< 4h) - Assumption: Active user logs at least sleep or work
-          // Filter out very old dates or future dates if needed
-          if (total < 4 && total > 0) {
-              anomalies.push({
-                  date,
-                  type: 'Structural',
-                  severity: 'Warning',
-                  category: 'Data Integrity',
-                  description: `Incomplete Day: Only ${total.toFixed(0)} hours reported`,
+                  description: `Impossible Daily Total: ${total.toFixed(0)} hours reported (Threshold > 35h)`,
                   value: total,
                   expected: 24
               });
           }
       });
+
+      const sleepAnomalies = this.detectSleepStreaks(entries);
+      anomalies.push(...sleepAnomalies);
 
       // Rule 3: Weekend Work Violations
       entries.filter(e => e.typeOfDay === 'Weekend' && e.prioritisedPersona === 'P3 Professional').forEach(e => {
@@ -91,6 +141,58 @@ export class AnomalyService {
                });
            }
       });
+
+      return anomalies;
+  }
+
+  // ==========================================================
+  // 2. Behavioral Detection (Steaks)
+  // ==========================================================
+
+  private detectSleepStreaks(entries: TimeEntry[]): Anomaly[] {
+      const anomalies: Anomaly[] = [];
+      const sleepEntries = entries.filter(e => e.task === 'Sleep' || e.prioritisedPersona === 'P0 Life Constraints (Sleep)');
+      
+      const sleepByDate: Record<string, number> = {};
+      sleepEntries.forEach(e => {
+          if (!sleepByDate[e.date]) sleepByDate[e.date] = 0;
+          sleepByDate[e.date] += e.hours;
+      });
+
+      // Get full date range to check missing days (0 hours)
+      const dates = Object.keys(sleepByDate).sort();
+      if (dates.length === 0) return [];
+      
+      const start = dayjs(dates[0]);
+      const end = dayjs(dates[dates.length - 1]);
+      let current = start;
+
+      let zeroSleepStreak = 0;
+      let streakStartDate = '';
+
+      while (current.isBefore(end)) {
+          const dateStr = current.format('YYYY-MM-DD');
+          const hours = sleepByDate[dateStr] || 0;
+
+          if (hours < 2) { // Allow some noise, but basically 0
+              if (zeroSleepStreak === 0) streakStartDate = dateStr;
+              zeroSleepStreak++;
+          } else {
+              if (zeroSleepStreak > 2) { // User Rule: > 2 days is the issue
+                  anomalies.push({
+                      date: `${streakStartDate} to ${dateStr}`,
+                      type: 'Structural', // or Behavioral
+                      severity: 'Critical',
+                      category: 'Health Risk',
+                      description: `Sleep Deprivation Streak: ${zeroSleepStreak} days with near-zero sleep`,
+                      value: 0,
+                      expected: 7
+                  });
+              }
+              zeroSleepStreak = 0;
+          }
+          current = current.add(1, 'day');
+      }
 
       return anomalies;
   }

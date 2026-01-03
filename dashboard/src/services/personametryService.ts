@@ -64,7 +64,7 @@ export async function loadTimeEntries(source?: DataSource): Promise<TimeEntriesD
   }
   
   const path = DATA_SOURCE_PATHS[dataSource];
-  const response = await fetch(path);
+  const response = await fetch(path, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to load time entries from ${dataSource}: ${response.statusText}`);
   }
@@ -907,4 +907,3 @@ export function calculateIndividualPatterns(
     },
   };
 }
-

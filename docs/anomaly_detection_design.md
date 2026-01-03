@@ -14,6 +14,36 @@ Simple statistical methods (like standard deviation) fail on human behavioral da
 
 To address this, we define a "PhD-Level" Hybrid Architecture:
 
+## 4. Detection Logic & Rules
+
+### A. Structural Integrity (Data Validity)
+
+_Checks for logic errors or physical impossibilities._
+
+- **Impossible Daily Total:** > **35 hours** in a single day.
+  - _Why 35h?_ Analysis of 10-year history shows valid continuous logging (e.g. sleep crossing midnight) can result in daily totals up to ~34h.
+  - _Severity:_ **Critical**
+- **Missing Data:** < 4 hours logged in a day.
+  - _Severity:_ **Warning**
+
+### B. Behavioral Analysis (Health & Hygiene)
+
+_Checks for dangerous behavioral patterns._
+
+- **Sleep Deprivation Streak:** > 2 consecutive days with < 2 hours of sleep.
+  - _Severity:_ **Critical**
+- **Weekend Overwork:** > 4 hours of work logged on a Weekend.
+  - _Severity:_ **Warning**
+
+### C. Statistical Anomalies (The "Inspector" Engine)
+
+_Uses STL Decomposition (Seasonal-Trend decomposition using LOESS)._
+
+1. **Deconstruct**: Separate history into Trend, Seasonality, and Residual noise.
+2. **Detect**: Calculate Modified Z-Score on Residuals.
+   - **Warning:** 3.5σ - 6σ deviation.
+   - **Critical:** > 6σ deviation.
+
 ### A. Decomposition-Based Detection (The "Unusual")
 
 _Isolating the signal from the noise._
