@@ -258,10 +258,10 @@
   - Fixed npm caching issues by adding `package-lock.json` to git tracking.
 - **GitHub Pages Compatibility**:
   - **Hash Router**: Switched `config.ts` to `history: { type: 'hash' }` to fix routing on static host (preventing blank page/404s).
-  - **Relative Paths**: Updated data fetching to use relative paths (`data/...` vs `/data/...`) to support subdirectory hosting (`/personametry/`).
+  - **Relative Paths**: Updated data fetching to use relative paths (`data/...` vs `/data/...`) to support custom domain root and subdirectory hosting when needed.
 - **Status**:
   - Workflow successfully building and deploying.
-  - Live URL: https://khanmjk.github.io/personametry/
+  - Live URL: https://personametry.com
 
 ### 14:20 - The "Ultimate Test" (End-to-End Validation) 🏆
 
@@ -788,6 +788,38 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Fix**: Moved value to Header (e.g., "Work Cap: 180h"). Added explicit `0h` and `250h` marks to slider track.
   - **Result**: Contract/Work sliders now clearly show they operate on the same 0-250 universal scale.
 
-- **Chart Visualization (v2.5 - In Progress)**:
-  - **Goal**: Tri-Layer Radar (2025 Actuals, 2026 Forecast, 2026 Optimized).
-  - **Status**: Data is present (3 layers visible), but Legend is missing and colors are incorrect (all blue). Debugging G2Plot configuration.
+- **Chart Visualization (v2.5 - Fixed)**:
+  - **Issue**: G2Plot v5 Radar chart ignored `color` prop and `meta` configuration (defaulting to blue palette).
+  - **Solution**: Adopted `WorkLifePie.tsx` pattern using `scale={{ color: { range: [...] } }}` directly on the component.
+  - **Result**: Tri-Layer Radar now correctly renders 2025 (Grey), Forecast (Blue), and Optimized (Green) with full legend visibility.
+
+### 09:45 - Restart Dev Server
+
+- **Action**: Ran `/restart-dev` workflow to refresh environment.
+- **Verification**:
+  - Validated process running (PID 60932).
+  - Validated HTTP 200 OK via curl.
+  - Server listening on port 8000.
+
+### 09:51 - About Page Feature (Personametry) ✅
+
+- **New Page**: Added `/about` route and full About page in `dashboard/src/pages/About/index.tsx`.
+- **Personal Profile**: Ported content from the reference app (Mo Khan profile, AI-first leadership tagline, avatar image, LinkedIn/GitHub/Blog links).
+- **Personametry Story**: Added concept summary + exploration highlights sections for context.
+- **Blog Feed**: Implemented `dashboard/src/services/aboutService.ts` (singleton) with Blogger feed parsing, caching, and JSONP fallback.
+- **Model**: Introduced `dashboard/src/models/about.ts` for typed blog post data.
+
+### 09:50 - Data Accuracy Fixes (v2.6) ✅
+
+- **Sleep Data Fix**:
+
+  - **Issue**: Radar chart showed 0 values for Sleep (P0) due to string mismatch.
+  - **Root Cause**: Service used `"P0 Life Constraints"` but actual data uses `"P0 Life Constraints (Sleep)"`.
+  - **Fix**: Updated `MachineLearningService.ts` to use correct persona string.
+
+- **Sabbatical Logic**:
+  - **Issue**: 2025 was a sabbatical year (~107h/mo work) causing incorrect 2026 forecast (low values).
+  - **User Strategy**: Take sabbatical break every 4 years.
+  - **Solution**: If 2025 Work avg < 120h/mo, calculate 4-year average (2021-2024) for "Business as Usual" forecast.
+  - **Result**: 2026 Forecast now shows realistic BAU levels, while 2025 Actual correctly displays sabbatical (low) hours.
+  - **Verification**: Unit test `verify_sabbatical.ts` passed (2025 Actual: 100h, 2026 Forecast: 160h).

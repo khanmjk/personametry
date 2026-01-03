@@ -36,7 +36,7 @@ git push origin main
 - Detects change to `seedfiles/harvest_time_report.xlsx`
 - Runs Python ETL → Generates `timeentries_harvest.json`
 - Builds dashboard
-- Deploys to https://khanmjk.github.io/personametry
+- Deploys to https://personametry.com
 
 ---
 

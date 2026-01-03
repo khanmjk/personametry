@@ -261,12 +261,17 @@ const MachineLearningPage: React.FC = () => {
                                     alias: 'Hours/Month'
                                 }
                             }}
+                            // G2 v5 / WorkLifePie Pattern: Use 'scale' for visual channels
+                            scale={{
+                                color: {
+                                    range: ['#bfbfbf', '#1890ff', '#52c41a']
+                                }
+                            }}
                             point={{ size: 4 }}
                             area={{
                                 style: { fillOpacity: 0.25 },
                             }}
-                            // Sorted Data Match: 2025(Grey), Forecast(Blue), Optimized(Green)
-                            color={['#bfbfbf', '#1890ff', '#52c41a']} 
+                            colorField="type" // Matches seriesField
                             legend={{ 
                                 position: 'top',
                             }}

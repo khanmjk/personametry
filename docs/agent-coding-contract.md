@@ -317,10 +317,11 @@ For session continuity, refer to:
 
 ### 11.1 GitHub Pages Compatibility (CRITICAL)
 
-The application is deployed to GitHub Pages via GitHub Actions. Agents must adhere to the following rules to ensure compatibility with subdirectory hosting (e.g., `khanmjk.github.io/personametry/`).
+The application is deployed to GitHub Pages via GitHub Actions and served at https://personametry.com (custom domain). Agents must adhere to the following rules to ensure compatibility with static hosting and path changes.
 
 | Requirement            | Rule                                                                            | Rationale                                                                                            |
 | :--------------------- | :------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------- |
-| **Relative Paths**     | ALWAYS use relative paths for assets/data (e.g., `logo.png`, `data/file.json`). | Absolute paths (`/logo.png`) resolve to the domain root, breaking in subdirectories.                 |
+| **Relative Paths**     | ALWAYS use relative paths for assets/data (e.g., `logo.png`, `data/file.json`). | Absolute paths (`/logo.png`) can break if the app is served from a subpath (preview or future host). |
 | **Hash Routing**       | Use `history: { type: 'hash' }` in `config.ts`.                                 | GitHub Pages is a static host and does not support browser history API routing.                      |
 | **No "public" prefix** | Do not include `/public/` in runtime paths.                                     | The build process flattens `public/` into the root. Use `data/foo.json`, not `public/data/foo.json`. |
+| **Public Path**        | Keep `PUBLIC_PATH` set to `/` in `.github/workflows/deploy.yml`.                | The custom domain is served from the root; other values break asset paths.                           |

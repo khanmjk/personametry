@@ -40,7 +40,8 @@ export class MachineLearningService {
    */
   public prepareBaselines(entries: TimeEntry[]): { forecasts: Record<string, ForecastResult>; history2025: Record<string, number>; readinessScore: number } {
       const forecasts: Record<string, ForecastResult> = {};
-      const relevantPersonas = ['P0 Life Constraints', 'P1 Muslim', 'P2 Individual', 'P3 Professional', 'P5 Family', 'P6 Friend Social'];
+      // Corrected strings to match actual data
+      const relevantPersonas = ['P0 Life Constraints (Sleep)', 'P1 Muslim', 'P2 Individual', 'P3 Professional', 'P5 Family', 'P6 Friend Social'];
       const p4Husband = 'P4 Husband';
       if (!relevantPersonas.includes(p4Husband)) relevantPersonas.push(p4Husband); // Ensure P4 is included
 
@@ -69,6 +70,39 @@ export class MachineLearningService {
           const sum = yearlySlice.reduce((a, b) => a + b, 0);
           history2025[p] = yearlySlice.length > 0 ? sum / yearlySlice.length : 0;
       });
+
+      // --- Sabbatical Logic (P3 Professional) ---
+      // If 2025 Work average is < 120h/mo (Sabbatical), use 2021-2024 average for 2026 Forecast
+      const p3Work = 'P3 Professional';
+      const p3Avg2025 = history2025[p3Work] || 0;
+      
+      if (p3Avg2025 < 120 && forecasts[p3Work]) {
+          const { history, labels } = this.extractMonthlyTimeSeries(entries, p3Work);
+          
+          // Calculate 4-Year Average (2021, 2022, 2023, 2024)
+          // Note: using 2021-2024 to smooth out 2024 peak and 2025 dip
+          const years = [2021, 2022, 2023, 2024];
+          let totalSum = 0;
+          let totalCount = 0;
+
+          years.forEach(year => {
+              const slice = this.extractYearlySlice(history, labels, year);
+              totalSum += slice.reduce((a, b) => a + b, 0);
+              totalCount += slice.length;
+          });
+
+          const fourYearAvg = totalCount > 0 ? totalSum / totalCount : 0;
+
+          // Overwrite the Forecast with this constant BAU baseline
+          forecasts[p3Work] = {
+              ...forecasts[p3Work],
+              forecast: new Array(12).fill(fourYearAvg),
+              // Flatten confidence intervals since it's a fixed baseline request
+              confidenceUpper: new Array(12).fill(fourYearAvg * 1.05),
+              confidenceLower: new Array(12).fill(fourYearAvg * 0.95),
+          };
+      }
+      // ------------------------------------------
 
       // 3. Calculate Readiness Score
       const last30Days = entries.filter(e => dayjs(e.date).isAfter(dayjs().subtract(30, 'day')));

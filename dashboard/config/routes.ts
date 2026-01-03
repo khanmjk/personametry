@@ -82,6 +82,12 @@ export default [
       icon: 'robot', 
       component: './MachineLearning',
   },
+  {
+    path: '/about',
+    name: 'About',
+    icon: 'infoCircle',
+    component: './About',
+  },
   // Home redirect
   {
     path: '/',
@@ -94,4 +100,3 @@ export default [
     path: './*',
   },
 ];
-
