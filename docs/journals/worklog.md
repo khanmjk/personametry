@@ -1089,3 +1089,11 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
     - **Row 5**: Context-aware Trend Chart (**Monthly Bar** for Year, **Yearly Stacked** for All Time).
   - **Cleanup**: Deleted `src/pages/Trends` and removed route.
 - **Result**: Single, powerful Overview with full control over data inclusion.
+
+### 16:05 - UX Refinement: Gains & Losses Chart 📉
+
+- **Objective**: Clarify the Gains & Losses chart visualization.
+- **Attempt 1 (Waterfall)**: Converted to a standard Waterfall chart. _Reverted by user request._
+- **Attempt 2 (Colors)**: Attempted to enforce Green/Red coloration on existing bar chart. _Reverted by user request._
+- **Resolution**: Kept existing Diverging Bar chart and removed the misleading Green/Red legend to reduce confusion.
+- **Result**: Cleaner interface with less cognitive dissonance.
