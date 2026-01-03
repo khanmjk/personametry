@@ -288,9 +288,9 @@ const AnomalyDetectionPage: React.FC = () => {
         </Card>
 
         {/* Row 3: Incident Log (ProTable) */}
+        {/* Row 3: Incident Log (ProTable) */}
         <ProTable<Anomaly>
             headerTitle="Incident Log"
-            dataSource={anomalies}
             rowKey={(record) => record.date + record.type}
             search={{
                 labelWidth: 'auto',
@@ -299,6 +299,71 @@ const AnomalyDetectionPage: React.FC = () => {
             pagination={{
                 pageSize: 10,
             }}
+            // Use request to handle filtering robustly even with local data
+            request={async (params, sort, filter) => {
+                let filtered = [...anomalies];
+
+                // 1. Search Filter (Severity, Type, Description) supported by ProTable default logic? 
+                // No, when using request, we must filter manually.
+                
+                // Severity Filter
+                if (params.severity) {
+                    filtered = filtered.filter(a => a.severity === params.severity);
+                }
+
+                // Type Filter
+                if (params.type) {
+                    filtered = filtered.filter(a => a.type === params.type);
+                }
+                
+                // Year Filter
+                if (params.year) {
+                     filtered = filtered.filter(a => dayjs(a.date.split(' to ')[0]).year().toString() === params.year);
+                }
+
+                // Date Range Filter (from 'date' column with valueType: dateRange)
+                if (params.date) {
+                    const [start, end] = params.date;
+                    const startUnix = dayjs(start).startOf('day').unix();
+                    const endUnix = dayjs(end).endOf('day').unix();
+                    
+                    filtered = filtered.filter(a => {
+                        const aDate = dayjs(a.date.split(' to ')[0]).unix();
+                        return aDate >= startUnix && aDate <= endUnix;
+                    });
+                }
+
+                // Keyword Search (if generic search needed, but we don't have one enabled yet)
+
+                // 2. Sorting
+                // Note: 'sort' object is like { date: 'ascend' }
+                const sortField = Object.keys(sort)[0];
+                const sortOrder = sortField ? sort[sortField] : undefined;
+
+                if (sortField && sortOrder) {
+                    filtered.sort((a, b) => {
+                        let aVal: any = a[sortField as keyof Anomaly];
+                        let bVal: any = b[sortField as keyof Anomaly];
+                        
+                        // Special handling for Date
+                        if (sortField === 'date') {
+                             aVal = dayjs(a.date.split(' to ')[0]).unix();
+                             bVal = dayjs(b.date.split(' to ')[0]).unix();
+                        }
+                        
+                        if (sortOrder === 'ascend') return aVal > bVal ? 1 : -1;
+                        return aVal < bVal ? 1 : -1;
+                    });
+                }
+
+                return {
+                    data: filtered,
+                    success: true,
+                    total: filtered.length,
+                };
+            }}
+            // Trigger request when anomalies data changes
+            params={{ anomaliesStamp: anomalies.length }} 
             columns={[
                 {
                     title: 'Severity',
@@ -317,33 +382,43 @@ const AnomalyDetectionPage: React.FC = () => {
                     title: 'Date / Range',
                     dataIndex: 'date',
                     width: 180,
-                    sorter: (a, b) => dayjs(a.date.split(' to ')[0]).unix() - dayjs(b.date.split(' to ')[0]).unix(),
-                    render: (dom, record) => {
+                    valueType: 'dateRange', // Use Date Range Picker for searching
+                    sorter: true, // Handled in request
+                    render: (_, record) => {
                          const isRange = record.date.includes('to');
                          return (
                              <Space>
                                  {isRange ? <CalendarOutlined /> : null}
-                                 {dom}
+                                 {record.date}
                              </Space>
                          );
-                    }
+                    },
+                    // We need to override search form to be dateRange, but display as text in table
+                    search: {
+                        transform: (value) => {
+                            return { date: value };
+                        },
+                    },
                 },
                 {
                     title: 'Year',
-                    dataIndex: 'date',
+                    dataIndex: 'year', // Virtual field for search
                     width: 80,
-                    hideInSearch: false, // Allow searching
-                    render: (_, record) => dayjs(record.date.split(' to ')[0]).year(),
-                    // Filter Logic
-                    filters: Array.from(new Set(anomalies.map(a => dayjs(a.date.split(' to ')[0]).year()))).sort().reverse().map(y => ({ text: y.toString(), value: y.toString() })),
-                    onFilter: (value, record) => dayjs(record.date.split(' to ')[0]).year().toString() === value,
-                },
+                    hideInTable: true, // We have date column
+                    renderFormItem: () => {
+                         // Build options dynamically
+                         const years = Array.from(new Set(anomalies.map(a => dayjs(a.date.split(' to ')[0]).year()))).sort().reverse();
+                         return (
+                             <Select>
+                                 {years.map(y => <Option key={y} value={y.toString()}>{y}</Option>)}
+                             </Select>
+                         );
+                    }
+                }, 
                 {
                     title: 'Type',
                     dataIndex: 'type',
                     width: 120,
-                    filters: true,
-                    onFilter: true,
                     valueEnum: {
                         Structural: { text: 'Structural', status: 'Default' },
                         Statistical: { text: 'Statistical', status: 'Processing' },
@@ -359,11 +434,13 @@ const AnomalyDetectionPage: React.FC = () => {
                     title: 'Description',
                     dataIndex: 'description',
                     ellipsis: true,
+                    search: false,
                 },
                 {
                     title: 'Impact',
                     dataIndex: 'score',
                     width: 100,
+                    search: false,
                     render: (_, record) => (
                         <Tag>{record.score?.toFixed(1)}x</Tag>
                     ),
