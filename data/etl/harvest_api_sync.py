@@ -211,7 +211,8 @@ def transform_api_data(entries):
         'socialContext': 'socialContext',
         'socialEntity': 'socialEntity',
         'meTimeBreakdown': 'meTimeBreakdown',
-        'commuteContext': 'commuteContext'
+        'commuteContext': 'commuteContext',
+        'external_id': 'external_id'
     }
     
     return df[list(output_columns.keys())].rename(columns=output_columns)
@@ -238,83 +239,57 @@ def load_existing_data():
     return entries, last_date
 
 def merge_and_deduplicate(existing, new_df):
-    """Merge new data with existing, preserving the API's latest version for overlaps."""
+    """
+    Merge new data with existing using Hybrid Deduplication.
+    1. Modern Records (With ID): Validated by 'external_id'. Updates replace old versions.
+    2. Legacy Records (No ID): Preserved as-is (unless we wipe them explicitly).
+    """
     if new_df.empty:
         return existing
 
     new_records = new_df.to_dict('records')
     
-    # Create DataFrames for comparison
-    df_existing = pd.DataFrame(existing)
-    df_new = pd.DataFrame(new_records)
+    # Map New Records by ID for fast lookup
+    new_by_id = {str(r.get('external_id')): r for r in new_records if r.get('external_id')}
     
-    # Columns used for identifying unique entries
-    dedup_cols = ['date', 'task', 'hours', 'startedAt']
+    final_list = []
     
-    # 1. Identify purely new records (not in existing based on dedup keys)
-    # We do a left merge to find what is ALREADY in existing
-    # Note: We need to ensure types match for merge
-    for col in dedup_cols:
-        df_existing[col] = df_existing[col].astype(str)
-        df_new[col] = df_new[col].astype(str)
+    # 1. Process Existing Records
+    legacy_count = 0
+    overwritten_count = 0
+    preserved_count = 0
+    
+    for row in existing:
+        row_id = str(row.get('external_id')) if row.get('external_id') else None
         
-    merged_check = pd.merge(
-        df_new, 
-        df_existing[dedup_cols], 
-        on=dedup_cols, 
-        how='left', 
-        indicator=True
-    )
+        if row_id and row_id in new_by_id:
+            # This existing record has an ID that is ALSO in the new batch.
+            # SKIP it here (we will add the FRESH version from new_records later).
+            overwritten_count += 1
+            continue
+            
+        # Otherwise keep it (Legacy, or Modern record not in current fetch window)
+        final_list.append(row)
+        if not row_id:
+            legacy_count += 1
+        else:
+            preserved_count += 1
+            
+    # 2. Add New Records (All of them - since we skipped their older versions above)
+    final_list.extend(new_records)
     
-    # records in new that exist in old (both) = Duplicates/Updates
-    duplicates = merged_check[merged_check['_merge'] == 'both']
-    new_unique = merged_check[merged_check['_merge'] == 'left_only']
-    
-    print(f"\n📊 Merge Analysis:")
-    print(f"   - Existing records: {len(existing)}")
-    print(f"   - New API records:  {len(new_records)}")
-    print(f"   - Overlaps found:   {len(duplicates)} (will be updated with fresh API data)")
-    print(f"   - Net new records:  {len(new_unique)}")
-    
-    if not duplicates.empty:
-        print("\n🔍 Overwritten Records Log (Sample up to 5):")
-        for idx, row in duplicates.head(5).iterrows():
-            print(f"   ♻️  Replaced: {row['date']} | {row['task']} ({row['hours']}h)")
-        if len(duplicates) > 5:
-            print(f"   ... and {len(duplicates) - 5} more.")
+    print(f"\n📊 Hybrid Deduplication Stats:")
+    print(f"   - Existing Handled:   {len(existing)}")
+    print(f"   - Overwritten (ID):   {overwritten_count} (Old versions replaced by fresh API data)")
+    print(f"   - Preserved (Legacy): {legacy_count}")
+    print(f"   - Preserved (Modern): {preserved_count}")
+    print(f"   - New Batch Added:    {len(new_records)}")
+    print(f"   - Final Total:        {len(final_list)}")
 
-    # 2. Perform the actual merge
-    # We concatenate existing + new, then drop_duplicates keeping 'last' (new)
-    combined_df = pd.DataFrame(existing + new_records)
-    
-    before_count = len(combined_df)
-    
-    combined_df.drop_duplicates(
-        subset=dedup_cols, 
-        keep='last', 
-        inplace=True
-    )
-    
-    after_count = len(combined_df)
-    
-    # Sanity check
-    expected_count = len(existing) + len(new_records) - len(duplicates)
-    # Note: Logic above is slightly fuzzy matching simple string types vs object types in drop_duplicates
-    # but the principle holds.
-    
-    print(f"\n✅ Final count: {after_count} entries.")
-    
     # Sort by date descending
-    combined_df.sort_values(by='date', ascending=False, inplace=True)
+    final_list.sort(key=lambda x: x['date'], reverse=True)
     
-    # Clean NaN values for JSON compliance
-    records = combined_df.to_dict('records')
-    for record in records:
-        for key, value in list(record.items()):
-            if pd.isna(value):
-                record[key] = None
-                
-    return records
+    return final_list
 
 def save_data(records):
     """Save records to JSON with updated metadata."""
