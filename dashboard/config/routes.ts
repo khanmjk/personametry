@@ -70,7 +70,7 @@ export default [
   },
   {
     path: '/anomaly-detection',
-    name: 'ML Anomaly Detector',
+    name: 'ML Anomaly Inspector',
     icon: 'alert',
     component: './AnomalyDetection',
   },
