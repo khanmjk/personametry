@@ -1,5 +1,5 @@
 import { LinkOutlined } from '@ant-design/icons';
-import type { Settings as LayoutSettings } from '@ant-design/pro-components';
+import type { MenuDataItem, Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
@@ -65,6 +65,24 @@ export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
 }) => {
+  const insertDividerBefore = (
+    items: MenuDataItem[],
+    targetPath: string,
+    dividerKey: string
+  ): MenuDataItem[] => {
+    const next: MenuDataItem[] = [];
+    items.forEach((item) => {
+      if (item.path === targetPath) {
+        const lastItem = next[next.length - 1];
+        if (lastItem?.type !== 'divider') {
+          next.push({ key: dividerKey, type: 'divider' });
+        }
+      }
+      next.push(item);
+    });
+    return next;
+  };
+
   return {
     // Center the global year selector in the header (hidden on Playground)
     actionsRender: () => {
@@ -91,6 +109,19 @@ export const layout: RunTimeLayoutConfig = ({
     bgLayoutImgList: [],
     // DISABLED: No dev links
     links: [],
+    menuDataRender: (menuData) => {
+      let updated = insertDividerBefore(
+        menuData,
+        '/playground',
+        'menu-divider-playground'
+      );
+      updated = insertDividerBefore(
+        updated,
+        '/about',
+        'menu-divider-about'
+      );
+      return updated;
+    },
     menuHeaderRender: undefined,
     // Children render - no extra wrapper needed, rootContainer handles provider
     childrenRender: (children) => {

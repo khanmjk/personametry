@@ -809,6 +809,13 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Blog Feed**: Implemented `dashboard/src/services/aboutService.ts` (singleton) with Blogger feed parsing, caching, and JSONP fallback.
 - **Model**: Introduced `dashboard/src/models/about.ts` for typed blog post data.
 
+### 12:26 - Data Integrity Fixes (Harvest Sync) ✅
+
+- **Root Cause Analysis**: Isolated 2025 inflation to legacy/API overlap in the 7-day sync window (duplicate entries at year-end).
+- **Deduplication Upgrade**: Strengthened `harvest_api_sync.py` to remove legacy overlap via composite keys (beyond `external_id`), with time normalization.
+- **One-Time Cleanup**: Removed 130 duplicate legacy rows from `timeentries_harvest.json`, restoring 2025 totals to expected range.
+- **Residual Delta Found**: Traced remaining 2.71h mismatch to a true duplicate row in `harvest_time_report.xlsx` (Jan 2, 2025).
+
 ### 09:50 - Data Accuracy Fixes (v2.6) ✅
 
 - **Sleep Data Fix**:
@@ -863,3 +870,82 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Holt-Winters**: Links to [OTexts - Forecasting Principles & Practice](https://otexts.com/fpp3/holt-winters.html) (academic textbook).
 - **Goal Programming**: Links to [Wikipedia](https://en.wikipedia.org/wiki/Goal_programming) (accessible explanation).
 - **Benefit**: Users can now learn more about the algorithms powering the ML engine.
+
+### 11:10 - Readiness Score Enhancement ✅
+
+- **Audit Complete**: Reviewed `ReadinessService.ts` for logic and assumptions.
+- **User Clarifications**:
+  1. Stale data not a risk (daily Harvest sync).
+  2. **Spiritual (P1 Muslim) must count as recovery** - Ramadan Itikaf is self-care.
+  3. Commute is correctly included under P3 Professional (not excluded).
+- **Code Changes**:
+  - Updated recovery calculation to include `P1 Muslim` hours alongside `P2 Individual`.
+  - Added `calculateReadinessBreakdown()` method returning component scores.
+  - Updated `MachineLearningService.ts` to return breakdown to UI.
+- **New Card**: "Readiness Insight" narrative card added below Lab controls:
+  - Shows Sleep / Work / Recovery % breakdown.
+  - Context-aware insight: "Excellent balance", "Sleep below target", "Work intensity high", etc.
+
+### 11:18 - Projected Readiness & Dynamic Updates ✅
+
+- **User Feedback**: Bottom-left card should update when sliders move.
+- **Design Clarification**:
+  - **Top-right card** (Readiness Score): Based on **last 30 days actuals** - static, shows current state.
+  - **Bottom-left card** (Projected Readiness): Based on **optimized profile targets** - dynamic, updates with sliders.
+- **Changes**:
+  - Renamed bottom-left card to "Projected Readiness"
+  - Calculates projected scores from `result.optimizedProfile` (sleep, work, individual, spiritual)
+  - Added "If you hit these targets" help text
+  - Added "Based on last 30 days of actuals" help text to top-right card
+  - Fixed hardcoded values (was showing 90% / 80% for everyone) - now uses actual `readinessBreakdown`
+- **Verification**:
+  - Sleep score: 100% → 30% when Target Sleep slider moved to 6.5h ✅
+  - Narrative updated from "Sustainable" → "Sleep target needs attention" ✅
+  - Recovery stays at 100% because baseline Individual + Spiritual hours already high (~1.5h/day) - correct behavior.
+
+### 12:00 - Baseline Update: 2021-2024 Averages ✅
+
+- **User Feedback**: 2025 was atypical (3-month sabbatical, reduced work March-May). Using 2025 as baseline creates unrealistic expectations.
+- **Solution**: Updated baseline calculation to use 4-year average (2021-2024) instead of single previous year.
+- **Changes**:
+  - `MachineLearningService.ts`: Replaced `historyPreviousYear` with `historyBaselineAverage` using 4-year average calculation
+  - `MachineLearning/index.tsx`: Updated labels from "2025 Actual" → "Baseline (2021-24)"
+  - Removed unused `prevYear` variable
+- **Verification**: Browser confirmed radar chart legend shows "Baseline (2021-24)", "2026 Forecast", "2026 Optimized" ✅
+- **Impact**: Work baseline now reflects typical working patterns (~140-170h/mo) rather than sabbatical-reduced 2025 values.
+
+### 12:11 - Work Forecast Override Fix ✅
+
+- **User Feedback**: 2026 Forecast still showed ~90h work (unrealistic).
+- **Root Cause**: Sabbatical detection was checking the _corrected_ baseline average instead of actual 2025 hours.
+- **Fix**: Updated sabbatical logic to:
+  - Calculate actual 2025 average separately (was 109h/mo)
+  - Compare that against 120h threshold
+  - Apply 4-year baseline average (189h/mo) to forecast
+- **Console Log Added**: `[ML] Sabbatical detected: 2025 avg was 109h/mo. Overriding forecast with 4-year avg: 189h/mo`
+- **Verification**: Browser console confirms forecast now uses representative 189h/mo instead of skewed 90h/mo. ✅
+
+### 12:17 - Sabbatical Override Extended to All Personas ✅
+
+- **User Feedback**: Sabbatical affects ALL streams, not just work. Other categories (Family, Individual, etc.) were artificially high in 2025 due to extra free time.
+- **Solution**: Extended sabbatical detection to override ALL persona forecasts with 2021-2024 averages.
+- **Console Output** (all now using representative baselines):
+  - P0 Sleep: 250h/mo
+  - P1 Muslim: 67h/mo
+  - P2 Individual: 67h/mo
+  - P3 Work: 189h/mo
+  - P4 Husband: 33h/mo
+  - P5 Family: 135h/mo
+  - P6 Social: 12h/mo
+- **Impact**: 2026 planning now based entirely on representative 2021-2024 data, not skewed 2025 sabbatical data.
+
+### 12:26 - Radar Chart Sabbatical Layer (4th Layer) ✅
+
+- **User Request**: Show 2025 data as a separate reference ("exception year") distinct from the Baseline.
+- **Solution**: Added conditional 4th layer to Radar Chart when sabbatical is detected.
+- **Color Coding**:
+  - **Baseline (2021-24)**: Purple (New color for contrast)
+  - **2025 (Sabbatical)**: Red (Warning/Exception color)
+  - **2026 Forecast**: Blue (Standard)
+  - **2026 Optimized**: Green (Standard)
+- **Verification**: Verified via screenshot. Legend correctly identifies all 4 layers. Red layer clearly shows the "sabbatical shape" vs the "baseline shape".

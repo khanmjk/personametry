@@ -238,19 +238,70 @@ def load_existing_data():
     print(f"📂 Loaded {len(entries)} existing entries. Last date: {last_date}")
     return entries, last_date
 
+def normalise_time_value(value):
+    if value is None:
+        return ''
+    text = str(value).strip()
+    if not text:
+        return ''
+    if ':' in text:
+        parts = text.split(':')
+        if len(parts) >= 2:
+            hour = parts[0].zfill(2)
+            minute = parts[1].zfill(2)
+            return f"{hour}:{minute}"
+    return text
+
+def build_composite_key(row):
+    date = str(row.get('date') or '').strip()
+    task = str(row.get('task') or '').strip()
+    notes = row.get('notesClean') or row.get('notes') or ''
+    notes = str(notes).strip()
+
+    hours_value = row.get('hours')
+    try:
+        hours = f"{float(hours_value):.2f}"
+    except (TypeError, ValueError):
+        hours = ''
+
+    started = normalise_time_value(row.get('startedAt'))
+    ended = normalise_time_value(row.get('endedAt'))
+
+    return (date, task, hours, started, ended, notes)
+
 def merge_and_deduplicate(existing, new_df):
     """
     Merge new data with existing using Hybrid Deduplication.
     1. Modern Records (With ID): Validated by 'external_id'. Updates replace old versions.
-    2. Legacy Records (No ID): Preserved as-is (unless we wipe them explicitly).
+    2. Legacy Records (No ID): Preserved unless a composite key match exists in the new batch.
     """
     if new_df.empty:
         return existing
 
     new_records = new_df.to_dict('records')
-    
-    # Map New Records by ID for fast lookup
-    new_by_id = {str(r.get('external_id')): r for r in new_records if r.get('external_id')}
+
+    new_ids = set()
+    new_keys = set()
+    deduped_new_records = []
+    duplicate_new_ids = 0
+    duplicate_new_keys = 0
+
+    for record in new_records:
+        record_id = str(record.get('external_id')) if record.get('external_id') else None
+        composite_key = build_composite_key(record)
+
+        if record_id:
+            if record_id in new_ids:
+                duplicate_new_ids += 1
+                continue
+            new_ids.add(record_id)
+        else:
+            if composite_key in new_keys:
+                duplicate_new_keys += 1
+                continue
+
+        new_keys.add(composite_key)
+        deduped_new_records.append(record)
     
     final_list = []
     
@@ -258,16 +309,23 @@ def merge_and_deduplicate(existing, new_df):
     legacy_count = 0
     overwritten_count = 0
     preserved_count = 0
+    legacy_overlap_count = 0
     
     for row in existing:
         row_id = str(row.get('external_id')) if row.get('external_id') else None
         
-        if row_id and row_id in new_by_id:
+        if row_id and row_id in new_ids:
             # This existing record has an ID that is ALSO in the new batch.
             # SKIP it here (we will add the FRESH version from new_records later).
             overwritten_count += 1
             continue
-            
+
+        if not row_id:
+            composite_key = build_composite_key(row)
+            if composite_key in new_keys:
+                legacy_overlap_count += 1
+                continue
+
         # Otherwise keep it (Legacy, or Modern record not in current fetch window)
         final_list.append(row)
         if not row_id:
@@ -276,14 +334,17 @@ def merge_and_deduplicate(existing, new_df):
             preserved_count += 1
             
     # 2. Add New Records (All of them - since we skipped their older versions above)
-    final_list.extend(new_records)
+    final_list.extend(deduped_new_records)
     
     print(f"\n📊 Hybrid Deduplication Stats:")
     print(f"   - Existing Handled:   {len(existing)}")
     print(f"   - Overwritten (ID):   {overwritten_count} (Old versions replaced by fresh API data)")
     print(f"   - Preserved (Legacy): {legacy_count}")
     print(f"   - Preserved (Modern): {preserved_count}")
-    print(f"   - New Batch Added:    {len(new_records)}")
+    print(f"   - Legacy Overlap:     {legacy_overlap_count} (Legacy rows removed via composite key)")
+    print(f"   - New Batch Added:    {len(deduped_new_records)}")
+    print(f"   - Duplicate New IDs:  {duplicate_new_ids}")
+    print(f"   - Duplicate New Keys: {duplicate_new_keys}")
     print(f"   - Final Total:        {len(final_list)}")
 
     # Sort by date descending

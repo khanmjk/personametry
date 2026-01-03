@@ -16,7 +16,7 @@ const MachineLearningPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   // Cached Forecasts (Heavy Prep)
-  const [baselines, setBaselines] = useState<{forecasts: any, historyPreviousYear: Record<string, number>, readinessScore: number, previousYear: number, currentYear: number} | null>(null);
+  const [baselines, setBaselines] = useState<{forecasts: any, historyBaselineAverage: Record<string, number>, history2025Actual: Record<string, number>, readinessScore: number, readinessBreakdown: any, previousYear: number, currentYear: number, isSabbaticalYear: boolean} | null>(null);
   // Live Result
   const [result, setResult] = useState<RecommendationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,44 +102,58 @@ const MachineLearningPage: React.FC = () => {
       return f ? f.forecast.reduce((a, b) => a + b, 0) / 12 : 0; // Forecasting 2026
   };
   
-  const getPreviousYearHistory = (key: string): number => {
-      return baselines?.historyPreviousYear[key] || 0;
+  const getBaselineHistory = (key: string): number => {
+      return baselines?.historyBaselineAverage[key] || 0;
   };
 
-  // Dynamic year labels
-  const prevYear = baselines?.previousYear || new Date().getFullYear() - 1;
-  const currYear = baselines?.currentYear || new Date().getFullYear();
+  const get2025Actual = (key: string): number => {
+      return baselines?.history2025Actual[key] || 0;
+  };
 
-  // Data for Radar Chart - 3 Layers
-  // Order: Previous Year (Grey) -> Forecast (Blue) -> Optimized (Green)
+  // Dynamic year labels (currYear used for Forecast/Optimized labels)
+  const prevYear = baselines?.previousYear || 2025;
+  const currYear = baselines?.currentYear || new Date().getFullYear();
+  const isSabbatical = baselines?.isSabbaticalYear || false;
+
+  // Data for Radar Chart - 4 Layers when sabbatical detected
+  // Order: Baseline (Purple) -> 2025 Sabbatical (Red) -> Forecast (Blue) -> Optimized (Green)
+  const sabbaticalLabel = `${prevYear} (Sabbatical)`;
   const rawData = [
-      { name: 'Work', type: `${prevYear} Actual`, value: getPreviousYearHistory('P3 Professional') },
+      { name: 'Work', type: 'Baseline (2021-24)', value: getBaselineHistory('P3 Professional') },
+      ...(isSabbatical ? [{ name: 'Work', type: sabbaticalLabel, value: get2025Actual('P3 Professional') }] : []),
       { name: 'Work', type: `${currYear} Forecast`, value: getBaseline('P3 Professional') },
       { name: 'Work', type: `${currYear} Optimized`, value: result.optimizedProfile.work },
       
-      { name: 'Sleep', type: `${prevYear} Actual`, value: getPreviousYearHistory('P0 Life Constraints (Sleep)') },
+      { name: 'Sleep', type: 'Baseline (2021-24)', value: getBaselineHistory('P0 Life Constraints (Sleep)') },
+      ...(isSabbatical ? [{ name: 'Sleep', type: sabbaticalLabel, value: get2025Actual('P0 Life Constraints (Sleep)') }] : []),
       { name: 'Sleep', type: `${currYear} Forecast`, value: getBaseline('P0 Life Constraints (Sleep)') },
       { name: 'Sleep', type: `${currYear} Optimized`, value: result.optimizedProfile.sleep },
       
-      { name: 'Family', type: `${prevYear} Actual`, value: getPreviousYearHistory('P5 Family') },
+      { name: 'Family', type: 'Baseline (2021-24)', value: getBaselineHistory('P5 Family') },
+      ...(isSabbatical ? [{ name: 'Family', type: sabbaticalLabel, value: get2025Actual('P5 Family') }] : []),
       { name: 'Family', type: `${currYear} Forecast`, value: getBaseline('P5 Family') },
       { name: 'Family', type: `${currYear} Optimized`, value: result.optimizedProfile.family },
       
-      { name: 'Husband', type: `${prevYear} Actual`, value: getPreviousYearHistory('P4 Husband') },
+      { name: 'Husband', type: 'Baseline (2021-24)', value: getBaselineHistory('P4 Husband') },
+      ...(isSabbatical ? [{ name: 'Husband', type: sabbaticalLabel, value: get2025Actual('P4 Husband') }] : []),
       { name: 'Husband', type: `${currYear} Forecast`, value: getBaseline('P4 Husband') },
       { name: 'Husband', type: `${currYear} Optimized`, value: result.optimizedProfile.husband },
 
-      { name: 'Health', type: `${prevYear} Actual`, value: getPreviousYearHistory('P2 Individual') },
+      { name: 'Health', type: 'Baseline (2021-24)', value: getBaselineHistory('P2 Individual') },
+      ...(isSabbatical ? [{ name: 'Health', type: sabbaticalLabel, value: get2025Actual('P2 Individual') }] : []),
       { name: 'Health', type: `${currYear} Forecast`, value: getBaseline('P2 Individual') },
       { name: 'Health', type: `${currYear} Optimized`, value: result.optimizedProfile.individual },
 
-      { name: 'Spiritual', type: `${prevYear} Actual`, value: getPreviousYearHistory('P1 Muslim') },
+      { name: 'Spiritual', type: 'Baseline (2021-24)', value: getBaselineHistory('P1 Muslim') },
+      ...(isSabbatical ? [{ name: 'Spiritual', type: sabbaticalLabel, value: get2025Actual('P1 Muslim') }] : []),
       { name: 'Spiritual', type: `${currYear} Forecast`, value: getBaseline('P1 Muslim') },
       { name: 'Spiritual', type: `${currYear} Optimized`, value: result.optimizedProfile.spiritual },
   ];
 
   // Specific Sort Order for Legend/Color Consistency
-  const sortOrder = [`${prevYear} Actual`, `${currYear} Forecast`, `${currYear} Optimized`];
+  const sortOrder = isSabbatical 
+      ? ['Baseline (2021-24)', sabbaticalLabel, `${currYear} Forecast`, `${currYear} Optimized`]
+      : ['Baseline (2021-24)', `${currYear} Forecast`, `${currYear} Optimized`];
   const radarData = rawData.sort((a, b) => sortOrder.indexOf(a.type) - sortOrder.indexOf(b.type));
 
   return (
@@ -167,15 +181,18 @@ const MachineLearningPage: React.FC = () => {
                    <Col flex="300px">
                        <Card size="small" title="Readiness Score" extra={<Statistic value={Math.round(result.readinessScore * 100)} suffix="%" valueStyle={{ fontSize: 18, color: result.readinessScore > 0.7 ? '#3f8600' : '#cf1322' }} />}>
                             <div style={{ marginBottom: 8 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><span>Sleep Balance</span><span>90%</span></div>
-                                <Progress percent={90} size="small" showInfo={false} strokeColor="#52c41a" />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><span>Sleep Balance</span><span>{baselines?.readinessBreakdown ? Math.round(baselines.readinessBreakdown.sleepScore * 100) : 0}%</span></div>
+                                <Progress percent={baselines?.readinessBreakdown ? Math.round(baselines.readinessBreakdown.sleepScore * 100) : 0} size="small" showInfo={false} strokeColor={baselines?.readinessBreakdown?.sleepScore >= 0.7 ? '#52c41a' : '#faad14'} />
                             </div>
                             <div style={{ marginBottom: 8 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><span>Work Load</span><span>{result.readinessScore > 0.5 ? '80%' : '40%'}</span></div>
-                                <Progress percent={result.readinessScore > 0.5 ? 80 : 40} size="small" showInfo={false} strokeColor={result.readinessScore > 0.5 ? '#1890ff' : '#cf1322'} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><span>Work Load</span><span>{baselines?.readinessBreakdown ? Math.round(baselines.readinessBreakdown.workScore * 100) : 0}%</span></div>
+                                <Progress percent={baselines?.readinessBreakdown ? Math.round(baselines.readinessBreakdown.workScore * 100) : 0} size="small" showInfo={false} strokeColor={baselines?.readinessBreakdown?.workScore >= 0.7 ? '#1890ff' : '#cf1322'} />
                             </div>
                             <div style={{ fontSize: 10, color: '#888', marginTop: 8 }}>
                                 {result.readinessScore > 0.7 ? "You are primed for growth." : "Recover mode active. Goals reduced."}
+                            </div>
+                            <div style={{ fontSize: 9, color: '#bbb', marginTop: 4, fontStyle: 'italic' }}>
+                                Based on last 30 days of actuals
                             </div>
                        </Card>
                    </Col>
@@ -247,6 +264,72 @@ const MachineLearningPage: React.FC = () => {
                     <Switch checked={!ignoreReadiness} onChange={(v) => setIgnoreReadiness(!v)} />
                 </Row>
             </Card>
+
+            {/* Readiness Narrative Card */}
+            {/* Readiness Insight - PROJECTED (based on optimized target) */}
+            {result && (
+                <Card 
+                    title={<><InfoCircleOutlined /> Projected Readiness</>} 
+                    bordered={false} 
+                    style={{ marginTop: 16 }}
+                    size="small"
+                >
+                    {(() => {
+                        // Calculate PROJECTED scores based on Optimized Profile vs Forecast
+                        const projectedSleepHrs = result.optimizedProfile.sleep / 30; // Monthly -> Daily
+                        const projectedWorkHrs = result.optimizedProfile.work / 30;
+                        // Include family + individual + spiritual for Recovery (all "self-care" categories)
+                        const projectedRecoveryHrs = (result.optimizedProfile.individual + result.optimizedProfile.spiritual + result.optimizedProfile.family) / 30;
+                        
+                        // Get FORECAST baseline for comparison (what would happen with no slider changes)
+                        const forecastRecoveryHrs = (
+                            (getBaseline('P2 Individual') + getBaseline('P1 Muslim') + getBaseline('P5 Family')) / 12
+                        ) / 30;
+
+                        // Apply formulas with realistic targets
+                        const projSleepScore = Math.min(1, Math.max(0, (projectedSleepHrs - 4) / (7.5 - 4)));
+                        const projWorkScore = Math.min(1, Math.max(0, 1 - ((projectedWorkHrs - 6) / (10 - 6))));
+                        // Recovery: Use RELATIVE delta from forecast (100% = matching forecast, <100% = below forecast)
+                        const projRecoveryScore = forecastRecoveryHrs > 0 
+                            ? Math.min(1, Math.max(0, projectedRecoveryHrs / forecastRecoveryHrs))
+                            : 0.5;
+                        const projOverall = (projSleepScore * 0.5) + (projWorkScore * 0.3) + (projRecoveryScore * 0.2);
+
+                        return (
+                            <>
+                                <div style={{ marginBottom: 12 }}>
+                                    <Row gutter={8}>
+                                        <Col span={8}><Text type="secondary">Sleep</Text></Col>
+                                        <Col span={8}><Text type="secondary">Work</Text></Col>
+                                        <Col span={8}><Text type="secondary">Recovery</Text></Col>
+                                    </Row>
+                                    <Row gutter={8}>
+                                        <Col span={8}><Text strong style={{ color: projSleepScore >= 0.7 ? '#52c41a' : '#faad14' }}>{Math.round(projSleepScore * 100)}%</Text></Col>
+                                        <Col span={8}><Text strong style={{ color: projWorkScore >= 0.7 ? '#52c41a' : '#faad14' }}>{Math.round(projWorkScore * 100)}%</Text></Col>
+                                        <Col span={8}><Text strong style={{ color: projRecoveryScore >= 0.7 ? '#52c41a' : '#faad14' }}>{Math.round(projRecoveryScore * 100)}%</Text></Col>
+                                    </Row>
+                                </div>
+                                <Divider style={{ margin: '8px 0' }} />
+                                <Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
+                                    {projSleepScore < 0.7 
+                                        ? `😴 Sleep target (${projectedSleepHrs.toFixed(1)}h/day) needs attention.`
+                                        : projWorkScore < 0.6 
+                                        ? `⚠️ Work load (${projectedWorkHrs.toFixed(1)}h/day) may feel heavy.`
+                                        : projRecoveryScore < 0.6
+                                        ? `🧘 Recovery time (${projectedRecoveryHrs.toFixed(1)}h/day) could be higher.`
+                                        : projOverall >= 0.7 
+                                        ? "✨ Targets look sustainable! Go for it."
+                                        : "🌱 Achievable with discipline. Stay mindful."
+                                    }
+                                </Paragraph>
+                                <div style={{ fontSize: 9, color: '#bbb', marginTop: 4, fontStyle: 'italic' }}>
+                                    If you hit these targets
+                                </div>
+                            </>
+                        );
+                    })()}
+                </Card>
+            )}
         </Col>
 
         {/* Section C: The Blueprint (Result) */}
@@ -268,7 +351,9 @@ const MachineLearningPage: React.FC = () => {
                             // G2 v5 / WorkLifePie Pattern: Use 'scale' for visual channels
                             scale={{
                                 color: {
-                                    range: ['#bfbfbf', '#1890ff', '#52c41a']
+                                    range: isSabbatical
+                                        ? ['#722ed1', '#f5222d', '#1890ff', '#52c41a'] // Purple, Red, Blue, Green
+                                        : ['#722ed1', '#1890ff', '#52c41a']            // Purple, Blue, Green
                                 }
                             }}
                             point={{ size: 4 }}

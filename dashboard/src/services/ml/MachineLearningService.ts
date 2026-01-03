@@ -42,7 +42,7 @@ export class MachineLearningService {
    * Phase 1: Heavy Computation (Run once on mount)
    * Calculates 2026 Forecasts and Readiness from History
    */
-  public prepareBaselines(entries: TimeEntry[]): { forecasts: Record<string, ForecastResult>; historyPreviousYear: Record<string, number>; readinessScore: number; previousYear: number; currentYear: number } {
+  public prepareBaselines(entries: TimeEntry[]): { forecasts: Record<string, ForecastResult>; historyBaselineAverage: Record<string, number>; history2025Actual: Record<string, number>; readinessScore: number; readinessBreakdown: { overall: number; sleepScore: number; workScore: number; recoveryScore: number; avgDailySleep: number; avgDailyWork: number; avgDailyRecovery: number }; previousYear: number; currentYear: number; isSabbaticalYear: boolean } {
       const previousYear = getPreviousYear();
       const currentYear = getCurrentYear();
       const forecasts: Record<string, ForecastResult> = {};
@@ -67,54 +67,76 @@ export class MachineLearningService {
       }
 
 
-      // 2. Calculate Previous Year Baselines (Actual History) for Comparison
-      const historyPreviousYear: Record<string, number> = {};
+
+      // 2. Calculate Baseline Averages (2021-2024) for Comparison
+      // Using multi-year average instead of single year to smooth out anomalies (e.g., sabbaticals)
+      const historyBaselineAverage: Record<string, number> = {};
+      const baselineYears = [2021, 2022, 2023, 2024]; // Representative working years
+      
       relevantPersonas.forEach(p => {
           const { history, labels } = this.extractMonthlyTimeSeries(entries, p);
-          const yearlySlice = this.extractYearlySlice(history, labels, previousYear);
-          // Average the previous year monthly data
-          const sum = yearlySlice.reduce((a, b) => a + b, 0);
-          historyPreviousYear[p] = yearlySlice.length > 0 ? sum / yearlySlice.length : 0;
-      });
-
-      // --- Sabbatical Logic (P3 Professional) ---
-      // If previous year Work average is < 120h/mo (Sabbatical), use 4-year average for Forecast
-      const p3Work = 'P3 Professional';
-      const p3AvgPrevYear = historyPreviousYear[p3Work] || 0;
-      
-      if (p3AvgPrevYear < 120 && forecasts[p3Work]) {
-          const { history, labels } = this.extractMonthlyTimeSeries(entries, p3Work);
           
-          // Calculate 4-Year Average (years before previous year)
-          // This smooths out any anomalies in the immediate prior years
-          const years = [previousYear - 4, previousYear - 3, previousYear - 2, previousYear - 1];
+          // Calculate 4-year average for this persona
           let totalSum = 0;
           let totalCount = 0;
-
-          years.forEach(year => {
+          
+          baselineYears.forEach(year => {
               const slice = this.extractYearlySlice(history, labels, year);
               totalSum += slice.reduce((a, b) => a + b, 0);
               totalCount += slice.length;
           });
+          
+          historyBaselineAverage[p] = totalCount > 0 ? totalSum / totalCount : 0;
+      });
 
-          const fourYearAvg = totalCount > 0 ? totalSum / totalCount : 0;
+      // 2b. Calculate 2025 Actual for comparison (sabbatical exception reference)
+      const history2025Actual: Record<string, number> = {};
+      relevantPersonas.forEach(p => {
+          const { history, labels } = this.extractMonthlyTimeSeries(entries, p);
+          const yearlySlice = this.extractYearlySlice(history, labels, previousYear);
+          const sum = yearlySlice.reduce((a, b) => a + b, 0);
+          history2025Actual[p] = yearlySlice.length > 0 ? sum / yearlySlice.length : 0;
+      });
 
-          // Overwrite the Forecast with this constant BAU baseline
-          forecasts[p3Work] = {
-              ...forecasts[p3Work],
-              forecast: new Array(12).fill(fourYearAvg),
-              // Flatten confidence intervals since it's a fixed baseline request
-              confidenceUpper: new Array(12).fill(fourYearAvg * 1.05),
-              confidenceLower: new Array(12).fill(fourYearAvg * 0.95),
-          };
+      // --- Sabbatical Detection & Override (ALL Personas) ---
+      // If previous year (2025) Work average is < 120h/mo, it's a sabbatical year
+      // When sabbatical detected: ALL streams are affected (work down, others artificially up)
+      // Override ALL forecasts with 4-year baseline average for realistic 2026 planning
+      const p3Work = 'P3 Professional';
+      const { history: p3History, labels: p3Labels } = this.extractMonthlyTimeSeries(entries, p3Work);
+      const p3PreviousYearSlice = this.extractYearlySlice(p3History, p3Labels, previousYear);
+      const p3ActualPrevYear = p3PreviousYearSlice.length > 0 
+          ? p3PreviousYearSlice.reduce((a, b) => a + b, 0) / p3PreviousYearSlice.length 
+          : 0;
+      
+      const isSabbaticalYear = p3ActualPrevYear < 120;
+      
+      if (isSabbaticalYear) {
+          console.log(`[ML] Sabbatical detected: 2025 work avg was ${p3ActualPrevYear.toFixed(0)}h/mo (< 120h threshold)`);
+          
+          // Override ALL persona forecasts with 4-year baseline averages
+          relevantPersonas.forEach(persona => {
+              const fourYearAvg = historyBaselineAverage[persona] || 0;
+              
+              if (forecasts[persona]) {
+                  forecasts[persona] = {
+                      ...forecasts[persona],
+                      forecast: new Array(12).fill(fourYearAvg),
+                      confidenceUpper: new Array(12).fill(fourYearAvg * 1.05),
+                      confidenceLower: new Array(12).fill(fourYearAvg * 0.95),
+                  };
+              }
+              console.log(`[ML] ${persona}: Forecast overridden to 4-year avg: ${fourYearAvg.toFixed(0)}h/mo`);
+          });
       }
       // ------------------------------------------
 
-      // 3. Calculate Readiness Score
+      // 3. Calculate Readiness Score + Breakdown
       const last30Days = entries.filter(e => dayjs(e.date).isAfter(dayjs().subtract(30, 'day')));
       const readinessScore = this.readinessEngine.calculateReadiness(last30Days);
+      const readinessBreakdown = this.readinessEngine.calculateReadinessBreakdown(last30Days);
 
-      return { forecasts, historyPreviousYear, readinessScore, previousYear, currentYear };
+      return { forecasts, historyBaselineAverage, history2025Actual, readinessScore, readinessBreakdown, previousYear, currentYear, isSabbaticalYear };
   }
 
   /**
