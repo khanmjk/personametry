@@ -372,8 +372,17 @@ const MachineLearningPage: React.FC = () => {
                             meta={{
                                 value: {
                                     min: 0,
-                                    alias: 'Hours/Month'
+                                    alias: 'Hours/Month',
+                                    formatter: (v: number) => Math.round(v).toString()
                                 }
+                            }}
+                            tooltip={{
+                                items: [
+                                    (d) => ({
+                                        name: d.type,
+                                        value: Math.round(d.value) + ' hrs'
+                                    })
+                                ]
                             }}
                             // G2 v5 / WorkLifePie Pattern: Use 'scale' for visual channels
                             scale={{

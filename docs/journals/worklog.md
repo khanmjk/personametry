@@ -1021,3 +1021,20 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Added "Year" column to Incident Log `ProTable`.
   - Synced Forensic Chart window to selected filter.
 - **Outcome**: Fully responsive UX allowing focused analysis of specific years or longitudinal study of "All Time".
+
+### 14:15 - UX & Robustness Improvements ✅
+
+- **Objective**: Fix table filtering bugs and harden application against async race conditions.
+- **Incident Log UX**:
+  - **Fix**: Implemented manual `request` handler in `ProTable` to correctly filter local data (Severity, Type).
+  - **Feature**: Replaced text-based date search with a **Date Range Picker** (`valueType: 'dateRange'`).
+- **System Stability**:
+  - **Async Guard**: Implemented `isMounted` pattern in ML engine to prevent "state update on unmounted component" errors during rapid navigation.
+  - **Global Error Boundary**: Added auto-recovery handler for `ChunkLoadError` to gracefully reload page on deployment version mismatches.
+- **Verification**: Browser-tested filtering and navigation stress tests.
+
+### 14:25 - UI Polish (Machine Learning) ✅
+
+- **Objective**: Clean up Radar Chart visual noise.
+- **Change**: Rounded all tooltip and axis values to whole numbers (removed decimals) for cleaner readability.
+- **Verification**: Verified tooltip displays clean integers (e.g., "228 hrs").
