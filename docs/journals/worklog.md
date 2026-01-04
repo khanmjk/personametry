@@ -1148,3 +1148,14 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Milestone**: Tagged codebase as **v1.0.0**.
 - **Status**: Official V1 Release.
 - **Notes**: Reset `dashboard/package.json` version from stored template `6.0.0` to `1.0.0`.
+
+### 14:15 - Documentation Overhaul 📚
+
+- **Objective**: Align project documentation with the V1.0.0 release status.
+- **Action**: Completely rewrote `README.md`.
+- **Changes**:
+  - Replaced tech jargon with clear value props ("balance", "insights").
+  - Documented new V1 features (Sleep Heatmap, Deep Work, RAG Scoring).
+  - Added specific install/run instructions.
+  - Added architecture overview.
+- **Result**: `README.md` now serves as a proper entry point for new users/developers.
