@@ -580,7 +580,7 @@ const PersonametryDashboard: React.FC = () => {
             style={{ ...CARD_STYLE, height: 380 }}
           >
             {(() => {
-              const radarData: { persona: string; score: number; year: string }[] = [];
+              const radarData: { persona: string; score: number; year: string; hours: number }[] = [];
               const allPersonaNames = Object.keys(PERSONA_SHORT_NAMES).filter(p => showSleep || p !== SLEEP_PERSONA);
               
               if (isAllTime) {
@@ -588,12 +588,14 @@ const PersonametryDashboard: React.FC = () => {
                   const yearEntriesForRadar = filterByYear(entries, year).filter(e => showSleep || e.prioritisedPersona !== SLEEP_PERSONA);
                   const summaries = groupByPersona(yearEntriesForRadar);
                   const summaryMap = new Map(summaries.map(s => [s.persona, s.percentageOfTotal]));
+                  const hoursMap = new Map(summaries.map(s => [s.persona, s.totalHours]));
                   
                   allPersonaNames.forEach((persona) => {
                     const shortName = PERSONA_SHORT_NAMES[persona] || persona;
                     radarData.push({
                       persona: shortName,
                       score: summaryMap.get(persona) || 0,
+                      hours: hoursMap.get(persona) || 0,
                       year: year.toString(),
                     });
                   });
@@ -602,22 +604,28 @@ const PersonametryDashboard: React.FC = () => {
                 const prevYearEntries = filterByYear(entries, (selectedYear as number) - 1).filter(e => showSleep || e.prioritisedPersona !== SLEEP_PERSONA);
                 
                 const currentMap = new Map(personaSummaries.map(s => [s.persona, s.percentageOfTotal]));
+                const currentHoursMap = new Map(personaSummaries.map(s => [s.persona, s.totalHours]));
+
                 allPersonaNames.forEach((persona) => {
                   const shortName = PERSONA_SHORT_NAMES[persona] || persona;
                   radarData.push({
                     persona: shortName,
                     score: currentMap.get(persona) || 0,
+                    hours: currentHoursMap.get(persona) || 0,
                     year: (selectedYear as number).toString(),
                   });
                 });
                 
                 const prevSummaries = groupByPersona(prevYearEntries);
                 const prevMap = new Map(prevSummaries.map(s => [s.persona, s.percentageOfTotal]));
+                const prevHoursMap = new Map(prevSummaries.map(s => [s.persona, s.totalHours]));
+
                 allPersonaNames.forEach((persona) => {
                   const shortName = PERSONA_SHORT_NAMES[persona] || persona;
                   radarData.push({
                     persona: shortName,
                     score: prevMap.get(persona) || 0,
+                    hours: prevHoursMap.get(persona) || 0,
                     year: ((selectedYear as number) - 1).toString(),
                   });
                 });
@@ -648,10 +656,12 @@ const PersonametryDashboard: React.FC = () => {
                   color={({ year }: { year: string }) => yearColorMap[year] || '#888'}
                   legend={{ position: 'bottom', itemName: { style: { fontSize: 11 } } }}
                   tooltip={{
-                    formatter: (datum: { persona: string; score: number; year: string }) => ({
-                      name: datum.year,
-                      value: `${datum.score.toFixed(1)}%`,
-                    }),
+                    items: [
+                      (datum: any) => ({
+                        name: datum.year,
+                        value: `${formatHours(datum.hours)} hrs`,
+                      }),
+                    ],
                   }}
                 />
               );
