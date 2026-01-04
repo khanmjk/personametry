@@ -143,7 +143,8 @@ Time is our most valuable resource. If time is our most valuable resource, do we
 ### Current Data Collection Method
 
 - **Tool:** [Harvest](https://www.getharvest.com/) time tracking
-- **Analytics:** [Amazon QuickSight](https://aws.amazon.com/quicksight/)
+- **Analytics:** [Personametry Dashboard](https://personametry.com) (Custom React App)
+- **Legacy Analytics:** [Amazon QuickSight](https://aws.amazon.com/quicksight/) (Defunct)
 - **AI Analysis:** ChatGPT, Claude, Gemini, NotebookLM
 
 ### Data Schema Fields
@@ -288,12 +289,13 @@ Minimal dashboard on web and mobile.
 
 ### Current Tools Used
 
-| Tool                                                    | Purpose                  |
-| ------------------------------------------------------- | ------------------------ |
-| [Harvest](https://www.getharvest.com/)                  | Time tracking data input |
-| [Amazon QuickSight](https://aws.amazon.com/quicksight/) | Dashboard visualization  |
-| [ChatGPT](https://openai.com/chatgpt/)                  | AI-driven data analysis  |
-| [NotebookLM](https://notebooklm.google.com/)            | Document analysis        |
+| Tool                                                    | Purpose                      |
+| ------------------------------------------------------- | ---------------------------- |
+| [Harvest](https://www.getharvest.com/)                  | Time tracking data input     |
+| [Personametry Dashboard](https://personametry.com)      | Primary Visualization        |
+| [Amazon QuickSight](https://aws.amazon.com/quicksight/) | Legacy/Defunct Visualization |
+| [ChatGPT](https://openai.com/chatgpt/)                  | AI-driven data analysis      |
+| [NotebookLM](https://notebooklm.google.com/)            | Document analysis            |
 
 ### Future Integration Opportunities
 
@@ -314,11 +316,12 @@ Minimal dashboard on web and mobile.
 4. [2023: Work/Life Balance & Harmony Update](https://khanmjk-outlet.blogspot.com/2023/01/2022-personametry-tracking-worklife.html) - 8 years of tracking
 5. [2023: Personametry + ChatGPT = personametry.ai](https://khanmjk-outlet.blogspot.com/2023/07/personametry-chatgpt-personametryai.html) - AI integration
 6. [2024: Quadrimester Analysis](https://khanmjk-outlet.blogspot.com/2024/05/24-personametry-first-quadrimester-jan.html) - Comparative insights
-7. [2025: 2024 Results](https://khanmjk-outlet.blogspot.com/2025/01/where-did-my-time-go-in-2024-sharing-my.html) - Latest review
+7. [2025: 2024 Results](https://khanmjk-outlet.blogspot.com/2025/01/where-did-my-time-go-in-2024-sharing-my.html)
+8. [2026: 2025 Progress - Introducing Personametry.com] (https://khanmjk-outlet.blogspot.com/2026/01/personametry-decades-journey-of-time.html)
 
 ### Key Insights from Years of Data
 
-- **10 years** of personal time tracking data (2015-2024)
+- **10 years** of personal time tracking data (2016-2025)
 - Consistent data collection across all life personas
 - Evolution from manual tracking to AI-assisted analysis
 - Validation that tracking enables intentional change

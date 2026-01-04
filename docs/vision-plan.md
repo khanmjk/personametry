@@ -38,18 +38,18 @@ Personametry is a **personal analytics platform** that transforms how you unders
 
 ## Product Evolution Roadmap
 
-### MVP v1.0 - Dashboard Shell (Current)
+### v1.0 - Dashboard Shell (Completed 2024)
 
 - React + Ant Design Pro dashboard
 - Mock data visualization
-- Multiple pages: Dashboard, RAGE Scorecard, Personas, Trends
 - Separation of concerns architecture
 
-### v1.1 - Real Data Integration
+### v1.1 - Real Data Integration (Live 2025/2026)
 
-- Python ETL for Harvest XLSX imports
-- Replace QuickSight with in-app processing
-- Historical data spanning 2015-2025
+- **Harvest API Sync** (Automated Daily ETL)
+- **Personametry Dashboard** replaces QuickSight
+- Historical data spanning 2016-2026
+- Full 10+ year dataset (87,000+ hours)
 
 ### v1.2 - AI-Insights Assistant 🤖
 
@@ -125,7 +125,7 @@ Personametry is a **personal analytics platform** that transforms how you unders
                                │
 ┌──────────────────────────────┴───────────────────────────────┐
 │                    ETL PIPELINE                               │
-│          Harvest XLSX → Python Parser → JSON/Database        │
+│          Harvest API → Python Syncer → JSON/Database         │
 └──────────────────────────────────────────────────────────────┘
 ```
 

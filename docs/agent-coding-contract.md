@@ -1,14 +1,12 @@
-# Personametry Dashboard - Agent Coding Contract
-
-**Version:** 1.0  
-**Last Updated:** December 31, 2024  
+**Version:** 1.1  
+**Last Updated:** January 4, 2026  
 **Purpose:** Define architecture rules, coding standards, and guidelines for AI agents working on this codebase.
 
 ---
 
 ## 1. Project Overview
 
-**Personametry** is a personal telemetry dashboard that visualizes 7+ years of time-tracking data across life personas (P0-P6). The system uses React + Ant Design Pro for visualization with a Python ETL pipeline for data processing.
+**Personametry** is a personal telemetry dashboard that visualizes 10+ years of time-tracking data across life personas (P0-P6) 2016-2025. The system uses React + Ant Design Pro for visualization with a Python ETL pipeline for data processing.
 
 ### Tech Stack
 
@@ -17,7 +15,7 @@
 | Frontend         | React 19, TypeScript 5, UmiJS 4       |
 | UI Framework     | Ant Design Pro v6, @ant-design/charts |
 | Data Pipeline    | Python 3.x, pandas                    |
-| Data Format      | JSON (processed from XLSX)            |
+| Data Format      | JSON (processed from Harvest API)     |
 | State Management | React Context + Hooks                 |
 
 ---
@@ -125,14 +123,14 @@ personametry/
 │   └── public/data/             # JSON data files
 ├── data/
 │   ├── etl/                     # Python ETL scripts
-│   │   ├── harvest_to_json.py   # Harvest → JSON
-│   │   └── quicksight_to_json.py # QuickSight → JSON
+│   │   ├── harvest_api_sync.py  # MAIN: Harvest Syncer
+│   │   └── harvest_to_json.py   # LEGACY: Excel → JSON
 │   └── processed/               # Generated JSON files
 ├── docs/
 │   ├── journals/worklog.md      # Development log
 │   ├── data-architecture.md     # Data schema documentation
 │   └── vision-plan.md           # Product roadmap
-└── seedfiles/                   # Raw XLSX source files
+└── seedfiles/                   # Raw XLSX source files (Legacy)
 ```
 
 ---
@@ -156,10 +154,12 @@ const CARD_STYLE = {
   borderRadius: 8,
   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
 };
+```
 
 ### 5.3 Multi-Colored Grouped Bar Charts
 
 **CRITICAL RULE**: When creating **grouped** bar/column charts (`isGroup: true`):
+
 1. You MUST set `colorField` matches the grouping field (e.g. `seriesField="year"` → `colorField="year"`).
 2. Without `colorField`, the library treats the series as a single continuous group and defaults to one color (blue).
 3. Do NOT rely on callbacks for colors in grouped charts; use an explicit array of hex strings if possible.
@@ -167,6 +167,7 @@ const CARD_STYLE = {
 ### 5.4 Pie Chart Standardization
 
 **Visual Standard**:
+
 1.  **Shape**: Use **Full Pie Charts** (`innerRadius: 0`). Avoid Ring/Donut charts unless explicitly requested for "Gauge" style metrics.
 2.  **Legend**: Do **NOT** use the default chart legend.
     - Use a **Split Layout** (`Row > Col 12 + Col 12`).
@@ -174,8 +175,7 @@ const CARD_STYLE = {
     - **Right Col**: Custom Legend Table showing `Color | Name | % | Value`.
 3.  **Consistency**: This ensures all Pie visualizations provide detailed data (Hours + %) at a glance without hovering.
 
-
-```
+````
 
 ### 5.5 G2 v5 Tooltip API (CRITICAL)
 
@@ -196,7 +196,7 @@ tooltip={{
     value: `${datum.yField.toLocaleString()} hrs`,
   })],
 }}
-```
+````
 
 **Common Symptoms of Using Deprecated API**:
 
@@ -242,22 +242,28 @@ useEffect(() => {
 
 ## 6. Data Sources
 
-### 6.1 A/B Testing Support
+### 6.1 Primary Workflow: Harvest API Sync
 
-The dashboard supports switching between data sources:
+The core data collection method is an automated synchronization with the Harvest API.
 
-| Source      | JSON File                  | Date Range |
-| ----------- | -------------------------- | ---------- |
-| Harvest ETL | `timeentries_harvest.json` | 2016-2022  |
-| QuickSight  | `timeentries.json`         | 2018-2024  |
+| Source      | Method                | Sync Frequency     | Status     |
+| ----------- | --------------------- | ------------------ | ---------- |
+| **Harvest** | **API Sync V2**       | Daily @ 09:00 SAST | **ACTIVE** |
+| QuickSight  | Excel Export (Legacy) | Manual / Defunct   | Legacy     |
 
 ### 6.2 ETL Pipeline
 
 ```
-Source XLSX → Python ETL → JSON → React Dashboard
+Harvest API (Source) → Python Sync Script → JSON (Repo) → React Dashboard
 ```
 
-All QuickSight transformation logic is replicated in `harvest_to_json.py`.
+1.  **Ingest**: `harvest_api_sync.py` fetches recent entries (incremental sync).
+2.  **Process**: Cleans, categorizes, and de-duplicates data.
+3.  **Store**: Saves to `data/processed/timeentries_harvest.json`.
+4.  **Deploy**: Git automatically commits and pushes changes to the repository.
+
+**Legacy Failsafe**:
+The system _can_ fall back to manual Excel uploads (`harvest_to_json.py`) if the API is down, but this is a secondary mechanism.
 
 ---
 

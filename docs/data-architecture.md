@@ -135,9 +135,10 @@ export interface TimeEntry {
 | 2021 | 8,711 | ✓ Full year                       |
 | 2022 | 8,715 | ✓ Full year                       |
 | 2023 | 8,797 | ✓ Full year                       |
-| 2024 | 8,771 | Partial (through Sep)             |
+| 2024 | 8,771 | ✓ Full year                       |
+| 2025 | 8,737 | ✓ Full year                       |
 
-**Total tracked: 61,345 hours across 7 years**
+**Total tracked: ~87,000+ hours across 10 years (2016-2025)**
 
 ---
 

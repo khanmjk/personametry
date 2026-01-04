@@ -16,7 +16,7 @@ _Source: Blog posts (2015-2025) and Product Specification Document_
 ### Current State
 
 - **Data Collection:** 10 years of hourly time tracking data
-- **Analysis Tools:** Evolved from QuickSight to ChatGPT/Claude/Gemini
+- **Analysis Tools:** Evolved from QuickSight → AI → Personametry Dashboard (React)
 - **Proven Value:** Consistent year-over-year tracking has enabled intentional life changes
 
 ---
