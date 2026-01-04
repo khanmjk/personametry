@@ -4,7 +4,7 @@
 
 ---
 
-## 2024-12-31 (Day 1)
+## 2025-12-31 (Day 1)
 
 ### 10:21 - Project Initialization & Research
 
@@ -450,7 +450,7 @@
 
 ---
 
-## 2026-01-02 (Day 4)
+## 2026-01-02 (Day 3)
 
 ### 08:00 - All Time Page Enhancements ✅
 
@@ -677,6 +677,10 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Automated Sync**: ✅ 7-day lookback, conflict-free.
   - **Production**: ✅ Auto-deploys fresh data.
   - **Local**: ✅ Auto-syncs on restart.
+
+---
+
+## 2026-01-03 (Day 4)
 
 ### 05:25 - Resolved Harvest Data Duplication
 
@@ -1098,6 +1102,10 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Resolution**: Kept existing Diverging Bar chart and removed the misleading Green/Red legend to reduce confusion.
 - **Result**: Cleaner interface with less cognitive dissonance.
 
+---
+
+## 2026-01-04 (Day 5)
+
 ### 07:44 - Monthly Hours Chart Enhancement ✅
 
 - **Objective**: Transform "Monthly Hours (Year)" chart from simple total bars to stacked/grouped bars showing persona breakdown.
@@ -1113,3 +1121,11 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - **Resolution**: Reverted to **Grouped + Colored** layout as the optimal stable state.
 - **Result**: Chart effectively shows month-by-month breakdown per persona with accurate colors and tooltips.
 - **Lesson**: Do not sacrifice working features (colors) for layout preferences (stacking) without a fail-safe backup.
+
+### 07:56 - Wheel of Life Tooltip Enhancement ✅
+
+- **Objective**: Improve tooltip on "Wheel of Life" radial chart to show useful metrics (Total Hours) instead of just the Year.
+- **Implementation**:
+  - Enriched `radarData` payload in `Personametry/index.tsx` to include `hours` alongside `score`.
+  - Replaced default tooltip with G2 v5 compliant `items` callback.
+- **Result**: Tooltip now displays "Year: X hrs" (e.g., "2025: 75.6 hrs"), providing immediate context to the radial shapes.

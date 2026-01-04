@@ -325,3 +325,16 @@ The application is deployed to GitHub Pages via GitHub Actions and served at htt
 | **Hash Routing**       | Use `history: { type: 'hash' }` in `config.ts`.                                 | GitHub Pages is a static host and does not support browser history API routing.                      |
 | **No "public" prefix** | Do not include `/public/` in runtime paths.                                     | The build process flattens `public/` into the root. Use `data/foo.json`, not `public/data/foo.json`. |
 | **Public Path**        | Keep `PUBLIC_PATH` set to `/` in `.github/workflows/deploy.yml`.                | The custom domain is served from the root; other values break asset paths.                           |
+
+---
+
+## 12. Worklog & Documentation Standards
+
+### 12.1 Accurate Timeline Tracking (MANDATORY)
+
+The `docs/journals/worklog.md` is the "source of truth" for the project's evolution. AI agents must perform the following:
+
+1.  **Date Headers**: Always ensure the current work session is logged under the correct `## YYYY-MM-DD (Day X)` header.
+2.  **Git Reconciliation**: Worklog entries MUST align with commit history. If in doubt, run `git log` to verify dates and sequences.
+3.  **Strict Sequencing**: Do not retroactively edit "Day X" counts based on guesses. The sequence must be 1, 2, 3... aligned with chronological dates.
+4.  **No Hallucinations**: Do not log tasks that were planning only; log what was _actually implemented_ and _verified_.
