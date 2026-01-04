@@ -1142,3 +1142,9 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Updated "Naps/Siestas" KPI card to show Weekday/Weekend split.
   - Added "Weekday vs Weekend" sleep average comparison card.
 - **Result**: Sleep page now answers "When do I sleep?", "Do I catch up on weekends?", and "How is my sleep health over time?".
+
+### 08:45 - OFFICIAL RELEASE V1.0.0 🚀
+
+- **Milestone**: Tagged codebase as **v1.0.0**.
+- **Status**: Official V1 Release.
+- **Notes**: Reset `dashboard/package.json` version from stored template `6.0.0` to `1.0.0`.
