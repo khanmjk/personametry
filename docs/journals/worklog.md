@@ -1129,3 +1129,16 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Enriched `radarData` payload in `Personametry/index.tsx` to include `hours` alongside `score`.
   - Replaced default tooltip with G2 v5 compliant `items` callback.
 - **Result**: Tooltip now displays "Year: X hrs" (e.g., "2025: 75.6 hrs"), providing immediate context to the radial shapes.
+
+### 08:30 - Sleep Page Enhancements & Schedule Analysis ✅
+
+- **Objective**: Provide deeper insights into sleep patterns (Bedtime, Wakeup, Siestas) and visual trends.
+- **Implementation**:
+  - **Sleep Health Heatmap**: Created a new `SleepHeatmap` component (RAG colored by hours) to visualize daily average sleep per month across all years.
+  - **Schedule Analytics**: Implemented circular averaging logic to correctly calculate "Avg Bedtime" and "Avg Wakeup" times, handling midnight crossover.
+  - **Siesta Metrics**: Added logic to track Naps (<3h) and split them by Weekday vs Weekend.
+- **UI Updates**:
+  - Added "Sleep Schedule" row (Avg Bedtime / Wakeup).
+  - Updated "Naps/Siestas" KPI card to show Weekday/Weekend split.
+  - Added "Weekday vs Weekend" sleep average comparison card.
+- **Result**: Sleep page now answers "When do I sleep?", "Do I catch up on weekends?", and "How is my sleep health over time?".
