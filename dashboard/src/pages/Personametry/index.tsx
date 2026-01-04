@@ -205,11 +205,39 @@ const PersonametryDashboard: React.FC = () => {
     ...(showSleep ? [{ type: 'Sleep', value: Math.round(sleepHours), color: META_WORK_LIFE_COLORS[MetaWorkLife.SLEEP_LIFE] }] : [])
   ];
 
-  // Monthly bar chart data
-  const monthlyBarData = monthlyTrends.map((m) => ({
-    month: m.monthName,
-    hours: Math.round(m.hours),
-  }));
+  // Monthly Stacked Bar Data
+  const monthlyStackedData: { month: string; persona: string; hours: number; monthNum: number }[] = [];
+  const monthMap = new Map<string, Map<string, number>>();
+
+  // Initialize map with all months to ensure correct sorting/display even if empty
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  months.forEach((m, idx) => {
+    monthMap.set(m, new Map());
+  });
+
+  displayedEntries.forEach(entry => {
+    const monthName = months[entry.month - 1]; // entry.month is 1-based
+    if (monthName) {
+      const pName = PERSONA_SHORT_NAMES[entry.prioritisedPersona] || entry.prioritisedPersona;
+      const currentMap = monthMap.get(monthName)!;
+      currentMap.set(pName, (currentMap.get(pName) || 0) + entry.hours);
+    }
+  });
+
+  // Flatten map to array
+  months.forEach((month, idx) => {
+    const pMap = monthMap.get(month)!;
+    if (pMap.size > 0) {
+       pMap.forEach((hours, persona) => {
+          monthlyStackedData.push({
+            month,
+            persona,
+            hours: Math.round(hours),
+            monthNum: idx + 1
+          });
+       });
+    }
+  });
 
   // Top 3 personas
   const top3 = personaSummaries.slice(0, 3);
@@ -706,27 +734,41 @@ const PersonametryDashboard: React.FC = () => {
               }
               style={{ ...CARD_STYLE, height: 360 }}
             >
-              <Column
-                data={monthlyBarData}
-                xField="month"
-                yField="hours"
-                height={260}
-                color={isAllTime ? '#0D7377' : (YEAR_COLORS[selectedYear as number] || '#0D7377')}
-                columnWidthRatio={0.6}
-                label={{
-                  position: 'top',
-                  content: ({ hours }: { hours: number }) => `${hours}`,
-                  style: { 
-                    fill: '#333', 
-                    fontSize: 13, 
-                    fontWeight: 700,
-                    textShadow: '0 0 3px #fff, 0 0 3px #fff',
+              {(() => {
+                const config = {
+                  data: monthlyStackedData,
+                  xField: 'month',
+                  yField: 'hours',
+                  seriesField: 'persona',
+                  isStack: true,
+                  isGroup: false,
+                  height: 260,
+                  colorField: 'persona',
+                  color: (datum: any) => {
+                     // G2Plot v2: first arg is series value (string) if seriesField is set
+                     const pName = typeof datum === 'string' ? datum : datum?.persona;
+                     if (!pName) return '#888';
+                     
+                     // Reverse lookup Short Name -> Full Name -> Color
+                     const fullPersona = Object.keys(PERSONA_SHORT_NAMES).find(key => PERSONA_SHORT_NAMES[key] === pName) || pName;
+                     return PERSONA_COLORS[fullPersona] || PERSONA_COLORS[pName] || '#888';
                   },
-                }}
-                xAxis={{ label: { style: { fontSize: 12, fontWeight: 500 } } }}
-                yAxis={{ title: { text: 'Hours', style: { fontSize: 12 } }, grid: { line: { style: { stroke: '#f0f0f0' } } } }}
-                tooltip={{ formatter: (datum: { hours: number }) => ({ name: 'Hours', value: `${datum.hours} hrs` }) }}
-              />
+                  columnWidthRatio: 0.6,
+                  legend: { 
+                    position: 'top-left' as const, 
+                    itemSpacing: 4, 
+                    itemName: { style: { fontSize: 11 } }, 
+                    marker: { symbol: 'circle' } 
+                  },
+                  xAxis: { label: { style: { fontSize: 12, fontWeight: 500 } } },
+                  yAxis: { title: { text: 'Hours', style: { fontSize: 12 } }, grid: { line: { style: { stroke: '#f0f0f0' } } } },
+                  tooltip: {
+                    title: (datum: any) => datum.month,
+                    items: [ (datum: any) => ({ name: datum.persona, value: `${datum.hours} hrs` }) ]
+                  }
+                };
+                return <Column {...config} />;
+              })()}
             </ProCard>
           )}
         </Col>

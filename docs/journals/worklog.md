@@ -1097,3 +1097,19 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - **Attempt 2 (Colors)**: Attempted to enforce Green/Red coloration on existing bar chart. _Reverted by user request._
 - **Resolution**: Kept existing Diverging Bar chart and removed the misleading Green/Red legend to reduce confusion.
 - **Result**: Cleaner interface with less cognitive dissonance.
+
+### 07:44 - Monthly Hours Chart Enhancement ✅
+
+- **Objective**: Transform "Monthly Hours (Year)" chart from simple total bars to stacked/grouped bars showing persona breakdown.
+- **Implementation**:
+  - Updated `Personametry/index.tsx` to aggregate `monthlyStackedData`.
+  - Refactored chart logic to use persona data for series/stacking.
+  - Implemented G2 v5 compliant tooltips (`title` + `items`) for readability.
+- **Challenges**:
+  - **Stacking vs. Coloring Conflict**:
+    - Removing `colorField` allowed stacking but lost all colors (chart turned blue).
+    - Keeping `colorField` ensured correct colors but forced a "Grouped" layout in this library version.
+  - **Regression**: Briefly broke chart colors ("all blue") while attempting to force stacking.
+  - **Resolution**: Reverted to **Grouped + Colored** layout as the optimal stable state.
+- **Result**: Chart effectively shows month-by-month breakdown per persona with accurate colors and tooltips.
+- **Lesson**: Do not sacrifice working features (colors) for layout preferences (stacking) without a fail-safe backup.
