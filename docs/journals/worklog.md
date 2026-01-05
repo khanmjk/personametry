@@ -1159,3 +1159,15 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Added specific install/run instructions.
   - Added architecture overview.
 - **Result**: `README.md` now serves as a proper entry point for new users/developers.
+
+
+## 2026-01-05 (Day 5)
+
+### 12:45 - Application Metadata Update
+
+- **Objective**: Fix incorrect "Ant Design Pro" title and missing description in link previews.
+- **Changes**:
+  - Updated `config/config.ts`: Set `title` to 'Personametry'.
+  - Updated `config/config.ts`: Added `description` meta tag.
+  - Verified `defaultSettings.ts` already correct.
+- **Outcome**: Link previews will now correctly show "Personametry".

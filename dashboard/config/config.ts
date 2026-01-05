@@ -86,7 +86,7 @@ export default defineConfig({
    * @name layout 插件
    * @doc https://umijs.org/docs/max/layout-menu
    */
-  title: 'Ant Design Pro',
+  title: 'Personametry',
   layout: {
     locale: true,
     ...defaultSettings,
@@ -146,6 +146,7 @@ export default defineConfig({
     { 'http-equiv': 'Cache-Control', content: 'no-cache, no-store, must-revalidate' },
     { 'http-equiv': 'Pragma', content: 'no-cache' },
     { 'http-equiv': 'Expires', content: '0' },
+    { name: 'description', content: 'Personametry Dashboard' },
   ],
   headScripts: [
     // 解决首次加载时白屏的问题
