@@ -503,6 +503,14 @@ export interface WorkPatternAnalysis {
     avgWeeklyHours: number;
     avgMonthlyHours: number;
   };
+  distribution: WorkDistributionAnalysis;
+}
+
+export interface WorkDistributionAnalysis {
+  histogram: { bin: string; count: number; min: number; max: number }[];
+  normalCurve: { x: number; y: number }[];
+  mean: number;
+  stdDev: number;
 }
 
 /**
@@ -679,6 +687,9 @@ export function calculateWorkPatterns(entries: TimeEntry[], year?: number): Work
   const activeMonths = new Set(p3Entries.map(e => `${e.year}-${e.monthNum}`)).size;
   
   const totalHours = sumHours(p3Entries);
+  
+  // 7. Calculate Distribution (Histogram + Normal Curve)
+  const distribution = calculateDistribution(dailyData);
 
   return {
     workIntensityHeatmap,
@@ -693,8 +704,78 @@ export function calculateWorkPatterns(entries: TimeEntry[], year?: number): Work
       avgDailyHours: dailyData.length > 0 ? totalHours / dailyData.length : 0,
       avgWeeklyHours: activeWeeks > 0 ? totalHours / activeWeeks : 0,
       avgMonthlyHours: activeMonths > 0 ? totalHours / activeMonths : 0,
-    }
+    },
+    distribution
   };
+}
+
+/**
+ * Calculate Histogram and Normal Curve for Work Distribution
+ */
+function calculateDistribution(dailyData: { hours: number }[]): WorkDistributionAnalysis {
+  if (dailyData.length === 0) {
+    return { histogram: [], normalCurve: [], mean: 0, stdDev: 0 };
+  }
+
+  const values = dailyData.map(d => d.hours);
+  const n = values.length;
+  const mean = values.reduce((a, b) => a + b, 0) / n;
+  const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+  const stdDev = Math.sqrt(variance);
+
+  // 1. Histogram (1-hour bins)
+  // Determine range
+  const minVal = Math.floor(Math.min(...values));
+  const maxVal = Math.ceil(Math.max(...values));
+  // Ensure reasonably wide range for the curve visualization (e.g. 0 to 18h)
+  const rangeMin = Math.min(0, minVal); 
+  const rangeMax = Math.max(16, maxVal + 1); 
+
+  const binSize = 1;
+  const histogramMap = new Map<number, number>();
+  
+  // Initialize bins
+  for (let i = rangeMin; i < rangeMax; i += binSize) {
+    histogramMap.set(i, 0);
+  }
+
+  // Fill bins
+  for (const v of values) {
+    const bin = Math.floor(v / binSize) * binSize;
+    if (histogramMap.has(bin)) {
+      histogramMap.set(bin, histogramMap.get(bin)! + 1);
+    }
+  }
+
+  const histogram = Array.from(histogramMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([start, count]) => ({
+      bin: `${start}-${start + binSize}h`,
+      min: start,
+      max: start + binSize,
+      count
+    }));
+
+  // 2. Normal Curve Points
+  // Generate points every 0.2h for smoothness
+  const normalCurve: { x: number; y: number }[] = [];
+  
+  if (stdDev > 0) {
+    const factor = 1 / (stdDev * Math.sqrt(2 * Math.PI));
+    
+    for (let x = rangeMin; x <= rangeMax; x += 0.2) {
+      const exponent = -0.5 * Math.pow((x - mean) / stdDev, 2);
+      const density = factor * Math.exp(exponent);
+      // Scale density to match histogram frequency scale roughly?
+      // Actually, DualAxes allows separate scales. Let's return raw probability density.
+      // Or better: Scale it to "Expected Frequency" so they align on the same axis?
+      // Expected Frequency = Density * N * BinWidth
+      const expectedFreq = density * n * binSize;
+      normalCurve.push({ x, y: expectedFreq });
+    }
+  }
+
+  return { histogram, normalCurve, mean, stdDev };
 }
 
 // ============================================

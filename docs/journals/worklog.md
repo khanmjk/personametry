@@ -1187,3 +1187,51 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Ensured active period calculation logic aligns with daily average logic (ignoring zero-data periods).
 - **Compliance**:
   - Audited against `agent-coding-contract.md`. Code is compliant with Layer Separation and Styling rules.
+
+### 16:30 - Work Intensity Distribution Chart ✅
+
+- **Objective**: Add "Work Intensity Distribution" histogram to Work Patterns page showing daily work hours distribution.
+- **Implemented**:
+  - Updated `personametryService.ts` to add `calculateDistribution()` function returning histogram bins + normal curve data.
+  - Created `WorkDistributionChart.tsx` component using `@ant-design/charts` Column chart.
+  - Zone-based coloring: Light (Blue <6h), Flow (Green 6-12h), Crunch (Amber 12-15h), Burnout (Red 15h+).
+  - Fixed multi-color rendering by using `colorField: 'zone'` with explicit `color` array in fixed zone order.
+  - Added custom zone legend and stats footer (Mean/StdDev).
+  - Dynamic: Re-calculates based on global year selection.
+- **Debugging Journey**:
+  - Initial `DualAxes` approach failed to render (canvas blank despite correct data).
+  - Import was incorrectly from `@ant-design/plots` (not installed) instead of `@ant-design/charts`.
+  - `color` callback function was ignored by library for per-bar coloring.
+  - `colorField` + `theme.colors10` palette caused color shift issues.
+  - Final fix: Use fixed `ZONE_ORDER` array to build consistent color palette.
+- **Verification**:
+  - Bars render correctly for all zones.
+  - Year selection dynamically updates histogram.
+  - Mean/StdDev stats display correctly.
+
+---
+
+## 2026-01-06 (Day 7)
+
+### 17:55 - Work Intensity Zone Threshold Alignment ✅
+
+- **Objective**: Align daily work hour thresholds with SA monthly heatmap labor standards.
+- **Problem**: Original thresholds (Flow 6-12h, Crunch 12-15h, Burnout >15h) didn't match SA labor law benchmarks.
+- **Implemented**:
+  - Researched HR standard: 52 weeks × 5 days ÷ 12 = **21.67 days/month**.
+  - Converted monthly thresholds to daily:
+    - 175h/21.67 = 8.08h/day (Normal limit)
+    - 200h/21.67 = 9.23h/day (Crunch limit)
+  - Updated `WorkDistributionChart.tsx` zone thresholds:
+    - Light: <6h (Blue)
+    - Normal: 6-9h (Green) - replaces "Flow"
+    - Crunch: 10-13h (Amber)
+    - Burnout: >13h (Red)
+  - Fixed G2 v5 scale.color configuration for reliable zone-to-color mapping.
+  - Shortened tooltip descriptions to fit Ant Design constraints.
+- **Files Modified**:
+  - `dashboard/src/components/charts/WorkDistributionChart.tsx`
+- **Verification**:
+  - Legend displays updated zone labels.
+  - Colors correctly match thresholds.
+  - Tooltip shows zone context without truncation.

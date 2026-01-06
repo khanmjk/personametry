@@ -11,6 +11,7 @@ import {
 import WorkHeatmap from '@/components/charts/WorkHeatmap';
 import LateNightChart from '@/components/charts/LateNightChart';
 import StreakHistogram from '@/components/charts/StreakHistogram';
+import WorkDistributionChart from '@/components/charts/WorkDistributionChart';
 import { FireOutlined, ClockCircleOutlined, ThunderboltOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useYear } from '@/contexts/YearContext';
 
@@ -193,6 +194,15 @@ const WorkPage: React.FC = () => {
                 height={350} 
               />
             )}
+          </Col>
+        </Row>
+      )}
+
+      {/* Distribution Analysis (Normal Curve) */}
+      {hasData && (
+        <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+          <Col span={24}>
+             <WorkDistributionChart data={yearAnalysis.distribution} />
           </Col>
         </Row>
       )}
