@@ -92,7 +92,7 @@ const WorkPage: React.FC = () => {
 
       {/* KPI Row (Year Specific or All Time) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={8}>
+        <Col xs={12} sm={8} md={6}>
           <Card>
             <Statistic
               title={`Late Days ${isAllTime ? '(All Time)' : `in ${selectedYear}`} (> 7 PM)`}
@@ -102,7 +102,7 @@ const WorkPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={12} sm={8} md={6}>
           <Card>
             <Statistic
               title={`Max Streak ${isAllTime ? '(All Time)' : `in ${selectedYear}`} (Days)`}
@@ -112,11 +112,35 @@ const WorkPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={12} sm={8} md={4}>
           <Card>
             <Statistic
               title="Avg Daily Hours"
               value={yearAnalysis.stats.avgDailyHours}
+              precision={1}
+              prefix={<ThunderboltOutlined />}
+              suffix="h"
+              valueStyle={{ color: hasData ? '#000' : '#999' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} md={4}>
+          <Card>
+            <Statistic
+              title="Avg Weekly Hours"
+              value={yearAnalysis.stats.avgWeeklyHours}
+              precision={1}
+              prefix={<ThunderboltOutlined />}
+              suffix="h"
+              valueStyle={{ color: hasData ? '#000' : '#999' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} md={4}>
+          <Card>
+            <Statistic
+              title="Avg Monthly Hours"
+              value={yearAnalysis.stats.avgMonthlyHours}
               precision={1}
               prefix={<ThunderboltOutlined />}
               suffix="h"

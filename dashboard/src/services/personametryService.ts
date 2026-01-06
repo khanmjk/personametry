@@ -500,6 +500,8 @@ export interface WorkPatternAnalysis {
     totalLateDays: number;
     maxStreakLength: number;
     avgDailyHours: number;
+    avgWeeklyHours: number;
+    avgMonthlyHours: number;
   };
 }
 
@@ -671,6 +673,13 @@ export function calculateWorkPatterns(entries: TimeEntry[], year?: number): Work
   streaks.lateEnd = calculateStreaks(d => d.endHour !== null && d.endHour >= LATE_END_STREAK_THRESHOLD)
     .map(s => ({ ...s, type: 'LateEnd' as const }));
 
+  // 6. Calculate Averages (Weekly / Monthly)
+  // Based on ACTIVE periods (weeks/months with at least one entry) to match Daily avg logic
+  const activeWeeks = new Set(p3Entries.map(e => `${e.year}-${e.weekNum}`)).size;
+  const activeMonths = new Set(p3Entries.map(e => `${e.year}-${e.monthNum}`)).size;
+  
+  const totalHours = sumHours(p3Entries);
+
   return {
     workIntensityHeatmap,
     lateDayFrequency,
@@ -681,7 +690,9 @@ export function calculateWorkPatterns(entries: TimeEntry[], year?: number): Work
         ...streaks.highWorkload.map(s => s.length), 
         ...streaks.lateEnd.map(s => s.length), 
       0),
-      avgDailyHours: dailyData.length > 0 ? sumHours(p3Entries) / dailyData.length : 0
+      avgDailyHours: dailyData.length > 0 ? totalHours / dailyData.length : 0,
+      avgWeeklyHours: activeWeeks > 0 ? totalHours / activeWeeks : 0,
+      avgMonthlyHours: activeMonths > 0 ? totalHours / activeMonths : 0,
     }
   };
 }

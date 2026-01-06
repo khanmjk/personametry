@@ -1160,7 +1160,6 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Added architecture overview.
 - **Result**: `README.md` now serves as a proper entry point for new users/developers.
 
-
 ## 2026-01-05 (Day 5)
 
 ### 12:45 - Application Metadata Update
@@ -1171,3 +1170,20 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Updated `config/config.ts`: Added `description` meta tag.
   - Verified `defaultSettings.ts` already correct.
 - **Outcome**: Link previews will now correctly show "Personametry".
+- Added 'Avg. Weekly Hours' and 'Avg. Monthly Hours' cards to Work Patterns page (Work/index.tsx)
+
+## 2026-01-06 (Day 6)
+
+### 15:30 - Work Patterns Page Improvements
+
+- **Objective**: Provide granular work intensity metrics (Weekly/Monthly averages) for better context than just Daily averages.
+- **Implemented**:
+  - Updated `personametryService.ts` to calculate active weeks and active months count.
+  - Added specific averages: `avgWeeklyHours` (Total / Active Weeks) and `avgMonthlyHours` (Total / Active Months).
+  - Updated `Work/index.tsx` to display 2 new KPI cards in the top row.
+  - Adjusted grid layout to support 5 cards (Late Days, Streak, Daily, Weekly, Monthly) responsively.
+- **Verification**:
+  - Verified values match expected ranges (e.g. ~35h/week).
+  - Ensured active period calculation logic aligns with daily average logic (ignoring zero-data periods).
+- **Compliance**:
+  - Audited against `agent-coding-contract.md`. Code is compliant with Layer Separation and Styling rules.
