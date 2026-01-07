@@ -1235,3 +1235,19 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
   - Legend displays updated zone labels.
   - Colors correctly match thresholds.
   - Tooltip shows zone context without truncation.
+
+
+## 2026-01-07 - Custom Distribution Chart with Toggle
+
+### Completed
+- Built custom SVG-based `CustomDistributionChart.tsx` component with histogram bars and normal distribution curve overlay in the same coordinate space
+- Added interpretive side panels explaining the bell curve and how to read the chart
+- Implemented toggle switch to switch between 'My Pattern' (personal μ/σ) and 'Industry Standard' (8h/1h benchmark)
+- All UI elements (curve color, side panel help text, legend) update dynamically based on selected mode
+- Replaced Ant Design `Column` chart with custom SVG implementation for precise alignment control
+
+### Key Design Decisions
+- Industry benchmark uses μ=8h and σ=1h, aligned with labor law standards (175h/month ≈ 8h/day)
+- Personal mode: purple dashed curve - answers 'Is my behavior consistent?'
+- Industry mode: green dashed curve - answers 'Am I working healthy hours?'
+
