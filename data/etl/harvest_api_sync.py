@@ -352,6 +352,18 @@ def merge_and_deduplicate(existing, new_df):
     
     return final_list
 
+def clean_nans(value):
+    """Recursively replace NaN/Description with None for JSON compliance."""
+    if isinstance(value, float):
+        if value != value:  # checks for NaN
+            return None
+        return value
+    if isinstance(value, dict):
+        return {k: clean_nans(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [clean_nans(v) for v in value]
+    return value
+
 def save_data(records):
     """Save records to JSON with updated metadata."""
     if not records:
@@ -359,10 +371,13 @@ def save_data(records):
         
     dates = [r['date'] for r in records if r['date']]
     
+    # Sanitize records to remove NaN values (which break JSON)
+    clean_records = clean_nans(records)
+    
     output = {
         "metadata": {
             "generatedAt": datetime.now().isoformat(),
-            "recordCount": len(records),
+            "recordCount": len(clean_records),
             "dateRange": {
                 "start": min(dates) if dates else None,
                 "end": max(dates) if dates else None
@@ -371,14 +386,14 @@ def save_data(records):
             "etlVersion": "harvest_api_sync v1.0",
             "note": "Incremental sync from Harvest API + Manual History"
         },
-        "entries": records
+        "entries": clean_records
     }
     
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     # PATH A: Primary Database (Processed Data)
     with open(OUTPUT_FILE, 'w') as f:
         json.dump(output, f, indent=2, default=str)
-    print(f"✅ Exported {len(records)} records to {OUTPUT_FILE}")
+    print(f"✅ Exported {len(clean_records)} records to {OUTPUT_FILE}")
 
     # PATH B: Dashboard Public Asset (Dual-Write for Local Dev support)
     # Allows 'git pull' to update the dev server immediately without ETL steps

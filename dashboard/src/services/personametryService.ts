@@ -63,14 +63,42 @@ export async function loadTimeEntries(source?: DataSource): Promise<TimeEntriesD
     return cachedData[dataSource]!;
   }
   
+  /* 
+   * Robust loading: Handle cases where JSON might contain NaN (invalid JSON).
+   */
   const path = DATA_SOURCE_PATHS[dataSource];
   const response = await fetch(path, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to load time entries from ${dataSource}: ${response.statusText}`);
   }
   
-  cachedData[dataSource] = await response.json();
+  try {
+    // Attempt standard JSON parse first for performance
+    const text = await response.text();
+    try {
+      cachedData[dataSource] = JSON.parse(text);
+    } catch (e) {
+      // Fallback: Fix NaNs if present (e.g. from Python/Pandas dumps)
+      console.warn(`Initial JSON parse failed for ${dataSource}, attempting recovery...`, e);
+      // Regex detects ": NaN" or ":NaN" and replaces with ": null"
+      const sanitized = text.replace(/:\s*NaN/g, ': null'); 
+      cachedData[dataSource] = JSON.parse(sanitized);
+    }
+  } catch (err) {
+    console.error(`Critical error traversing JSON for ${dataSource}`, err);
+    throw err;
+  }
+  
   return cachedData[dataSource]!;
+}
+
+/**
+ * Get the last refreshed timestamp from the current loaded data
+ */
+export function getLastRefreshedTime(): string | null {
+  const dataSource = currentDataSource;
+  if (!cachedData[dataSource]) return null;
+  return cachedData[dataSource]?.metadata?.generatedAt || null;
 }
 
 /**

@@ -15,6 +15,7 @@ import GlobalYearSelector from '@/components/GlobalYearSelector';
 import { YearProvider } from '@/contexts/YearContext';
 import { currentUser as queryCurrentUser } from '@/services/ant-design-pro/api';
 import defaultSettings from '../config/defaultSettings';
+import { getLastRefreshedTime } from '@/services/personametryService';
 import { errorConfig } from './requestErrorConfig';
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -103,10 +104,25 @@ export const layout: RunTimeLayoutConfig = ({
     // Center the global year selector in the header (hidden on Playground)
     actionsRender: () => {
       const isPlayground = history.location.pathname === '/playground';
+      
+      // Get refresh time safely
+      // We need to import it properly or use a hook if reactivity is needed. 
+      // Since app.tsx is a bit static, we can try to get it if loaded.
+      // However, data might not be loaded yet. 
+      // A better place might be the Footer, but let's try to add it next to the selector if we can.
+      // For now, let's just use the service getter directly.
+      const lastRefreshed = getLastRefreshedTime();
+      const refreshedDate = lastRefreshed ? new Date(lastRefreshed).toLocaleString() : '';
+
       if (isPlayground) return []; // Playground has its own filters
       return [
-        <div key="year-selector" style={{ display: 'flex', justifyContent: 'center', flex: 1 }}>
+        <div key="year-selector" style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
           <GlobalYearSelector />
+          {refreshedDate && (
+             <span style={{ fontSize: '10px', color: '#888', marginLeft: '16px', whiteSpace: 'nowrap' }}>
+               Refreshed: {refreshedDate}
+             </span>
+          )}
         </div>
       ];
     },
