@@ -17,6 +17,7 @@ import { MetaWorkLife, PERSONA_COLORS, PERSONA_SHORT_NAMES } from '@/models/pers
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import isoWeek from 'dayjs/plugin/isoWeek';
+import { notification } from 'antd';
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
@@ -86,6 +87,11 @@ export async function loadTimeEntries(source?: DataSource): Promise<TimeEntriesD
     }
   } catch (err) {
     console.error(`Critical error traversing JSON for ${dataSource}`, err);
+    notification.error({
+      message: 'Data Loading Error',
+      description: `Failed to load ${dataSource} data. Please check the network or ETL status.`,
+      duration: 10,
+    });
     throw err;
   }
   

@@ -118,11 +118,25 @@ export const layout: RunTimeLayoutConfig = ({
       return [
         <div key="year-selector" style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
           <GlobalYearSelector />
-          {refreshedDate && (
-             <span style={{ fontSize: '10px', color: '#888', marginLeft: '16px', whiteSpace: 'nowrap' }}>
-               Refreshed: {refreshedDate}
-             </span>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '16px', lineHeight: '1.2' }}>
+            {refreshedDate && (
+              <span style={{ fontSize: '10px', color: '#888', whiteSpace: 'nowrap' }}>
+                Refreshed: {refreshedDate}
+              </span>
+            )}
+            <a 
+              href="https://github.com/khanmjk/personametry/actions/workflows/harvest_sync.yml" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ display: 'block', height: '20px' }}
+            >
+              <img 
+                src="https://github.com/khanmjk/personametry/actions/workflows/harvest_sync.yml/badge.svg" 
+                alt="Harvest Sync Status" 
+                style={{ height: '18px' }}
+              />
+            </a>
+          </div>
         </div>
       ];
     },
