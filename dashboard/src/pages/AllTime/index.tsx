@@ -61,11 +61,10 @@ const AllTimePage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Filter out current incomplete year (e.g., 2026) for "All Time" analysis
-  // This ensures metrics reflect "Complete Years" only
+  // Use all available years up to the current date
   const currentYear = new Date().getFullYear();
-  const displayedYears = availableYears.filter(y => y < currentYear);
-  const displayedEntries = entries.filter(e => e.year < currentYear);
+  const displayedYears = availableYears;
+  const displayedEntries = entries;
 
   // Include all metrics (Sleep included)
   // const entriesExcludingSleep = entries.filter(e => e.prioritisedPersona !== SLEEP_PERSONA);
@@ -82,7 +81,6 @@ const AllTimePage: React.FC = () => {
   const totalHours = sumHours(filteredEntries);
   const totalEntries = filteredEntries.length;
   const yearCount = displayedYears.length;
-  const avgPerYear = totalHours / yearCount;
 
   // Persona breakdown across all years (still show all for context)
   const personaSummaries = selectedPersona === 'ALL' 
@@ -115,25 +113,12 @@ const AllTimePage: React.FC = () => {
   // 1. Calculate Theoretical Max (365.25 days * 24h = 8766h/yr approx, or 8760 for non-leap)
   const HOURS_PER_YEAR = 8760;
   
-  // 2. Identified Latest Complete Year
-  // displayedYears is already filtered to exclude current year.
-  // So displayedYears[0] is the latest complete year (e.g. 2025).
-  const latestCompleteYear = displayedYears.length > 0 ? displayedYears[0] : 0;
-  const latestCompleteYearData = yearlyTotals.find(y => y.year === latestCompleteYear.toString());
-  
-  // 3. Calculate Accuracy for that year
   // Determine if leap year
   const isLeapYear = (year: number) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-  const targetHours = isLeapYear(latestCompleteYear) ? 8784 : 8760;
-  const recordedHours = latestCompleteYearData ? latestCompleteYearData.hours : 0;
-  
-  const missingHours = targetHours - recordedHours;
-  const accuracyPct = targetHours > 0 ? (recordedHours / targetHours) * 100 : 0;
-  
+
   // 4. All Time Coverage (approx)
-  // Use displayedYears (completed years only)
   // SPECIAL HANDLING: 2016 is a partial year (started mid-year).
-  // We should calculate the target based on the FIRST logged entry in 2016.
+  // Current year is also a partial year (up to latest sync date).
   const calculateYearTarget = (year: number) => {
     const daysInYear = isLeapYear(year) ? 366 : 365;
     
@@ -141,9 +126,7 @@ const AllTimePage: React.FC = () => {
     if (year === 2016) {
        const entriesIn2016 = entries.filter(e => e.year === 2016);
        if (entriesIn2016.length > 0) {
-          // Find first date
           const dates = entriesIn2016.map(e => e.date).sort();
-          // Assuming date format YYYY-MM-DD, lexicographical sort works
           const firstDate = new Date(dates[0]);
           const lastDate = new Date('2016-12-31');
           const diffTime = Math.abs(lastDate.getTime() - firstDate.getTime());
@@ -151,12 +134,44 @@ const AllTimePage: React.FC = () => {
           return daysActive * 24;
        }
     }
+
+    // Exception for current year (Partial Year)
+    if (year === currentYear) {
+       const entriesInCurrentYear = entries.filter(e => e.year === currentYear);
+       if (entriesInCurrentYear.length > 0) {
+          const dates = entriesInCurrentYear.map(e => e.date).sort();
+          const firstDate = new Date(`${currentYear}-01-01`);
+          const lastDate = new Date(dates[dates.length - 1]);
+          const diffTime = Math.abs(lastDate.getTime() - firstDate.getTime());
+          const daysActive = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          return daysActive * 24;
+       }
+    }
+    
     return daysInYear * 24;
   };
 
   const totalTargetHours = displayedYears.reduce((sum, year) => {
     return sum + calculateYearTarget(year);
   }, 0);
+
+  // Fractional years for accurate average calculation
+  const fractionalYears = displayedYears.reduce((sum, year) => {
+    const fullYear = isLeapYear(year) ? 8784 : 8760;
+    return sum + (calculateYearTarget(year) / fullYear);
+  }, 0);
+  const avgPerYear = fractionalYears > 0 ? totalHours / fractionalYears : 0;
+
+  // 2. Identified Latest Available Year (for Tracking Quality)
+  const latestCompleteYear = displayedYears.length > 0 ? displayedYears[0] : 0;
+  const latestCompleteYearData = yearlyTotals.find(y => y.year === latestCompleteYear.toString());
+  
+  // 3. Calculate Accuracy for that year
+  const targetHours = calculateYearTarget(latestCompleteYear);
+  const recordedHours = latestCompleteYearData ? latestCompleteYearData.hours : 0;
+  
+  const missingHours = targetHours - recordedHours;
+  const accuracyPct = targetHours > 0 ? (recordedHours / targetHours) * 100 : 0;
   
   // Accuracy color
   const getAccuracyColor = (pct: number) => {
@@ -197,7 +212,7 @@ const AllTimePage: React.FC = () => {
       dataIndex: 'totalHours',
       key: 'avgPerYear',
       align: 'right' as const,
-      render: (hours: number) => <Text type="secondary">{formatHours(hours / yearCount)} hrs</Text>,
+      render: (hours: number) => <Text type="secondary">{formatHours(fractionalYears > 0 ? hours / fractionalYears : 0)} hrs</Text>,
     },
   ];
 
@@ -242,18 +257,18 @@ const AllTimePage: React.FC = () => {
   }
 
   // Calculate Total Benchmark (for Total Hours card)
-  // Use sum of displayedYears. Handle 2016 Partial Exception.
+  // Use sum of displayedYears. Handle 2016 and current year Partial Exceptions.
   const totalBenchmarkHours = displayedYears.reduce((sum, year) => {
     if (!activeBenchmark) return 0;
     
     let yearBenchmark = activeBenchmark;
     
-    // Adjust for 2016 if it's in the displayed years
-    if (year === 2016) {
+    // Adjust for partial years
+    if (year === 2016 || year === currentYear) {
         // Calculate factor based on days active / total days
-        const target2016 = calculateYearTarget(2016);
-        const full2016 = isLeapYear(2016) ? 8784 : 8760;
-        const fraction = target2016 / full2016;
+        const targetYear = calculateYearTarget(year);
+        const fullYear = isLeapYear(year) ? 8784 : 8760;
+        const fraction = targetYear / fullYear;
         yearBenchmark = activeBenchmark * fraction;
     }
     

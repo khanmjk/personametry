@@ -1251,3 +1251,5 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 - Personal mode: purple dashed curve - answers 'Is my behavior consistent?'
 - Industry mode: green dashed curve - answers 'Am I working healthy hours?'
 
+
+- 26 Apr 2026: Updated 'All Time' page to remove the 10-year limitation. Included fractional calculation for current year data to ensure KPIs and averages reflect live daily sync data accurately.
