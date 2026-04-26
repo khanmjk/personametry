@@ -394,6 +394,33 @@ export function groupByWeek(entries: TimeEntry[]): WeeklyTrend[] {
 // ============================================
 
 /**
+ * Get comparable entries for previous year (YTD matched if current year is ongoing)
+ */
+export function getComparablePreviousYearEntries(
+  entries: TimeEntry[],
+  currentYear: number,
+  previousYear: number
+): TimeEntry[] {
+  const previousEntries = filterByYear(entries, previousYear);
+  const actualCurrentYear = new Date().getFullYear();
+  
+  // If the selected year is the actual current year, we want a YTD comparison
+  if (currentYear === actualCurrentYear) {
+    const currentEntries = filterByYear(entries, currentYear);
+    if (currentEntries.length > 0) {
+      // Find the latest date in the current year's data
+      const maxDateStr = currentEntries.reduce((max, e) => e.date > max ? e.date : max, `${currentYear}-01-01`);
+      const maxMonthDay = maxDateStr.substring(5); // e.g. "04-26"
+      
+      // Filter previous year's entries up to that same month and day
+      return previousEntries.filter(e => e.date.substring(5) <= maxMonthDay);
+    }
+  }
+  
+  return previousEntries;
+}
+
+/**
  * Calculate year-over-year comparison for all personas
  */
 export function calculateYoYComparison(
@@ -402,7 +429,8 @@ export function calculateYoYComparison(
   previousYear: number
 ): YearlyComparison[] {
   const currentEntries = filterByYear(entries, currentYear);
-  const previousEntries = filterByYear(entries, previousYear);
+  const previousEntries = getComparablePreviousYearEntries(entries, currentYear, previousYear);
+
   
   const currentByPersona = groupByPersona(currentEntries);
   const previousByPersona = groupByPersona(previousEntries);

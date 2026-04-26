@@ -47,7 +47,8 @@ import {
   groupEntriesByPeriod,
   getLastNDays,
   getPersonaColor,
-  filterByMetaWorkLife
+  filterByMetaWorkLife,
+  getComparablePreviousYearEntries
 } from '@/services/personametryService';
 import YearlyStackedBar from '@/components/charts/YearlyStackedBar';
 
@@ -601,7 +602,8 @@ const PersonametryDashboard: React.FC = () => {
                   });
                 });
               } else {
-                const prevYearEntries = filterByYear(entries, (selectedYear as number) - 1).filter(e => showSleep || e.prioritisedPersona !== SLEEP_PERSONA);
+                const prevYearComparable = getComparablePreviousYearEntries(entries, selectedYear as number, (selectedYear as number) - 1);
+                const prevYearEntries = prevYearComparable.filter(e => showSleep || e.prioritisedPersona !== SLEEP_PERSONA);
                 
                 const currentMap = new Map(personaSummaries.map(s => [s.persona, s.percentageOfTotal]));
                 const currentHoursMap = new Map(personaSummaries.map(s => [s.persona, s.totalHours]));

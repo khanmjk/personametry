@@ -1253,3 +1253,5 @@ The Key Stats section now uses StatisticCard.Group which provides a cleaner, mor
 
 
 - 26 Apr 2026: Updated 'All Time' page to remove the 10-year limitation. Included fractional calculation for current year data to ensure KPIs and averages reflect live daily sync data accurately.
+
+- 26 Apr 2026: Enhanced YoY Comparison to use Year-to-Date (YTD) filtering when comparing a partial current year with the previous year to ensure apples-to-apples evaluation.
